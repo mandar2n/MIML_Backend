@@ -10,7 +10,9 @@
    conda env create -f environment.yml
 
 2. **가상환경 활성화**:
+   ```bash
    conda activate fastapi
 
 2. **프로젝트 실행**:
+   ```bash
    uvicorn src.main:app --reload
