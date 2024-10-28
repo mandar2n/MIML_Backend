@@ -1,0 +1,19 @@
+# Python 관련 파일 및 디렉터리
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# 가상환경 관련 파일 및 디렉터리
+.venv/
+env/
+venv/
+fastapi/
+
+# 환경 변수 파일
+.env
+
+# VSCode 설정 파일
+.vscode/
