@@ -1,11 +1,11 @@
 # src/main.py
 
 from fastapi import FastAPI
-from database import engine
-from models import Base
-
+from src.database import engine
+from src.models import Base
+from src.routers import spotify
 app = FastAPI()
-
+app.include_router(spotify.router, prefix="/spotify", tags=["Spotify"])
 # 데이터베이스 생성
 Base.metadata.create_all(bind=engine)
 
