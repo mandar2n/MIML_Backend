@@ -1,7 +1,7 @@
 # src/services/spotify_service.py
 
-import spotify
-from spotify.oauth2 import SpotifyClientCredentials
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
 from typing import List, Optional, Dict
 from src.config.config import load_config  # 새로운 파일 구조에 맞추어 import
 
@@ -14,7 +14,7 @@ client_credentials_manager = SpotifyClientCredentials(
     client_secret=config["SPOTIFY_CLIENT_SECRET"]
 )
 
-spotify = spotify.Spotify(client_credentials_manager=client_credentials_manager)
+spotify = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 def get_song_info(song_name: str) -> Optional[List[Dict[str, str]]]:
     """
