@@ -56,6 +56,9 @@ class UserResponse(UserBase):
     class Config:
         orm_mode = True  # ORM 모델을 기반으로 직렬화 가능하도록 설정
 
+class FollowRequest(BaseModel):
+    follower_id: int
+
 class SongShare(BaseModel):
     """
     사용자가 노래를 공유할 때 사용하는 스키마

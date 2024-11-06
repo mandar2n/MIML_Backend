@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from src.models import User, Song, Follow, Playlist
-from typing import Optional
+from typing import Optional,List
 
 
 async def create_user(db: AsyncSession, email: str, hashed_password: str, name: str, profile_image_url: Optional[str] = None):
@@ -21,6 +21,17 @@ async def create_user(db: AsyncSession, email: str, hashed_password: str, name: 
 async def get_user_by_email(db: AsyncSession, email: str):
     result = await db.execute(select(User).filter(User.email == email))
     return result.scalars().first()
+
+async def search_user_by_name(db: AsyncSession, name: str) -> List[User]:
+    result = await db.execute(select(User).filter(User.name.ilike(f"%{name}%")))
+    return result.scalars().all()
+
+async def add_follow(db: AsyncSession, follower_id: int, following_id: int):
+    follow = Follow(follower_id=follower_id, following_id=following_id)
+    db.add(follow)
+    await db.commit()
+    await db.refresh(follow)
+    return follow
 
 
 async def create_song(db: AsyncSession, title: str, artist: str, album: str, spotify_url: str, shared_by: int):
