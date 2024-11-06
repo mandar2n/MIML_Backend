@@ -9,11 +9,11 @@ from src.schemas import SongShare  # SongShare 스키마 추가 필요
 router = APIRouter()
 
 @router.post("/share")
-def share_song_to_feed(song: SongShare, db: Session = Depends(get_db)):
+async def share_song_to_feed(song: SongShare, db: Session = Depends(get_db)):
     """
     사용자가 노래를 선택하여 피드에 공유하는 엔드포인트
     """
-    shared_song = share_song(
+    shared_song = await share_song(
         db=db,
         user_id=song.user_id,
         song_title=song.title,

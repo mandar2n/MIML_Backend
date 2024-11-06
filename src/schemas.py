@@ -38,6 +38,7 @@ class UserBase(BaseModel):
     """
     email: str
     name: str
+    profile_image_url: Optional[str] = None  # 프로필 이미지 URL 필드 추가
 
 class UserCreate(UserBase):
     """

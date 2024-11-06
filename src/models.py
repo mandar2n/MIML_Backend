@@ -22,6 +22,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     name = Column(String, nullable=False)
+    profile_image_url = Column(String, nullable=True)  # 프로필 이미지 URL 필드 추가
     created_at = Column(DateTime, default=datetime.utcnow)
 
     songs = relationship("Song", back_populates="user")

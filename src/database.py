@@ -16,3 +16,11 @@ async def init_db():
     # run_sync를 사용하여 동기 작업을 비동기 환경에서 실행
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+# get_db 함수 추가
+async def get_db():
+    async with SessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
