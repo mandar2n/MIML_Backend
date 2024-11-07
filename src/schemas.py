@@ -70,3 +70,12 @@ class SongShare(BaseModel):
     spotify_url: str
     album_cover_url: Optional[str] = None
     uri: Optional[str] = None
+    
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
