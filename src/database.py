@@ -12,6 +12,7 @@ engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
 Base = declarative_base()
 
+# initialize database
 async def init_db():
     # run_sync를 사용하여 동기 작업을 비동기 환경에서 실행
     async with engine.begin() as conn:
@@ -23,4 +24,5 @@ async def get_db():
         try:
             yield session
         finally:
-            await session.close()
+            #await session.close()
+            pass

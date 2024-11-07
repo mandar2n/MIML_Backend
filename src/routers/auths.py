@@ -14,7 +14,6 @@ router = APIRouter()
 
 @router.post("/register")
 async def register_user(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    # Use asynchronous select query
     result = await db.execute(select(User).filter(User.email == request.email))
     user = result.scalars().first()  # Get the first result
 
@@ -28,22 +27,21 @@ async def register_user(request: RegisterRequest, db: AsyncSession = Depends(get
         name=request.name
     )
     db.add(new_user)
-    await db.commit()  # Use async commit
-    await db.refresh(new_user)  # Use async refresh
+    await db.commit() 
+    await db.refresh(new_user) 
 
     return {"msg": "User registered successfully"}
 
 @router.post("/login")
 async def login_user(request: LoginRequest, db: AsyncSession = Depends(get_db)):
-    async with db.begin():  # Ensure db session is used asynchronously
-        # Use 'select' for async queries
-        result = await db.execute(select(User).filter(User.email == request.email))
-        user = result.scalar_one_or_none()
-
+    result = await db.execute(select(User).filter(User.email == request.email))
+    user = result.scalars().first()  # fetch one user
+    
     if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
     access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=30))
+    
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/logout")

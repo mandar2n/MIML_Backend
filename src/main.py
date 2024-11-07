@@ -1,5 +1,3 @@
-# src/main.py
-
 from fastapi import FastAPI
 from src.database import engine
 from src.models import Base
@@ -14,8 +12,8 @@ async def lifespan(app: FastAPI):
     yield  # 종료 시에 수행할 추가 작업이 있다면 yield 이후에 추가 가능
 
 app = FastAPI(lifespan=lifespan)
-# 각각의 라우터를 앱에 추가
 
+# 각각의 라우터를 앱에 추가
 app.include_router(spotify.router, prefix="/spotify", tags=["Spotify"])
 app.include_router(songs.router, prefix="/songs", tags=["Songs"])
 app.include_router(users.router, prefix="/users", tags=["Users"])  
