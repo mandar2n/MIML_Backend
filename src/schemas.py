@@ -38,6 +38,7 @@ class UserBase(BaseModel):
     """
     email: str
     name: str
+    profile_image_url: Optional[str] = None  # 프로필 이미지 URL 필드 추가
 
 class UserCreate(UserBase):
     """
@@ -54,6 +55,9 @@ class UserResponse(UserBase):
 
     class Config:
         orm_mode = True  # ORM 모델을 기반으로 직렬화 가능하도록 설정
+
+class FollowRequest(BaseModel):
+    follower_id: int
 
 class SongShare(BaseModel):
     """

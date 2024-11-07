@@ -1,83 +1,93 @@
-# src/crud.py
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import func
 from datetime import datetime, timedelta
-from src.models import Song
+from src.models import User, Song, Follow, Playlist
+from typing import Optional,List
 
 
-from sqlalchemy.orm import Session
-from models import User, Song, Follow, Playlist
-
-
-def create_user(db: Session, email: str, hashed_password: str, name: str):
-    user = User(email=email, hashed_password=hashed_password, name=name)
+async def create_user(db: AsyncSession, email: str, hashed_password: str, name: str, profile_image_url: Optional[str] = None):
+    user = User(
+        email=email,
+        hashed_password=hashed_password,
+        name=name,
+        profile_image_url=profile_image_url  # 프로필 이미지 URL 설정
+    )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return user
 
-def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
+async def get_user_by_email(db: AsyncSession, email: str):
+    result = await db.execute(select(User).filter(User.email == email))
+    return result.scalars().first()
 
-def create_song(db: Session, title: str, artist: str, album: str, spotify_url: str, shared_by: int):
+async def search_user_by_name(db: AsyncSession, name: str) -> List[User]:
+    result = await db.execute(select(User).filter(User.name.ilike(f"%{name}%")))
+    return result.scalars().all()
+
+async def add_follow(db: AsyncSession, follower_id: int, following_id: int):
+    follow = Follow(follower_id=follower_id, following_id=following_id)
+    db.add(follow)
+    await db.commit()
+    await db.refresh(follow)
+    return follow
+
+
+async def create_song(db: AsyncSession, title: str, artist: str, album: str, spotify_url: str, shared_by: int):
     song = Song(title=title, artist=artist, album=album, spotify_url=spotify_url, shared_by=shared_by)
     db.add(song)
-    db.commit()
-    db.refresh(song)
+    await db.commit()
+    await db.refresh(song)
     return song
 
-def get_daily_chart(db: Session):
+
+async def get_daily_chart(db: AsyncSession):
     """ 일간 차트: 하루 동안 공유된 노래의 공유 횟수를 집계합니다. """
     today = datetime.utcnow().date()
-    return db.query(
-        Song.title, Song.artist, func.count(Song.id).label('share_count')
-    ).filter(
-        func.date(Song.shared_at) == today
-    ).group_by(
-        Song.title, Song.artist
-    ).order_by(
-        func.count(Song.id).desc()
-    ).all()
+    result = await db.execute(
+        select(Song.title, Song.artist, func.count(Song.id).label('share_count'))
+        .filter(func.date(Song.shared_at) == today)
+        .group_by(Song.title, Song.artist)
+        .order_by(func.count(Song.id).desc())
+    )
+    return result.all()
 
-def get_weekly_chart(db: Session):
+
+async def get_weekly_chart(db: AsyncSession):
     """ 주간 차트: 일주일 동안 공유된 노래의 공유 횟수를 집계합니다. """
     start_of_week = datetime.utcnow().date() - timedelta(days=datetime.utcnow().date().weekday())
-    return db.query(
-        Song.title, Song.artist, func.count(Song.id).label('share_count')
-    ).filter(
-        func.date(Song.shared_at) >= start_of_week
-    ).group_by(
-        Song.title, Song.artist
-    ).order_by(
-        func.count(Song.id).desc()
-    ).all()
+    result = await db.execute(
+        select(Song.title, Song.artist, func.count(Song.id).label('share_count'))
+        .filter(func.date(Song.shared_at) >= start_of_week)
+        .group_by(Song.title, Song.artist)
+        .order_by(func.count(Song.id).desc())
+    )
+    return result.all()
 
-def get_monthly_chart(db: Session):
+
+async def get_monthly_chart(db: AsyncSession):
     """ 월간 차트: 한 달 동안 공유된 노래의 공유 횟수를 집계합니다. """
     start_of_month = datetime.utcnow().replace(day=1).date()
-    return db.query(
-        Song.title, Song.artist, func.count(Song.id).label('share_count')
-    ).filter(
-        func.date(Song.shared_at) >= start_of_month
-    ).group_by(
-        Song.title, Song.artist
-    ).order_by(
-        func.count(Song.id).desc()
-    ).all()
+    result = await db.execute(
+        select(Song.title, Song.artist, func.count(Song.id).label('share_count'))
+        .filter(func.date(Song.shared_at) >= start_of_month)
+        .group_by(Song.title, Song.artist)
+        .order_by(func.count(Song.id).desc())
+    )
+    return result.all()
 
-def share_song(
-    db: Session, 
-    user_id: int, 
-    song_title: str, 
-    artist: str, 
-    album: str, 
-    spotify_url: str, 
-    album_cover_url: str, 
+
+async def share_song(
+    db: AsyncSession,
+    user_id: int,
+    song_title: str,
+    artist: str,
+    album: str,
+    spotify_url: str,
+    album_cover_url: str,
     uri: str
 ):
-    """
-    공유된 노래를 데이터베이스에 추가합니다.
-    """
     shared_song = Song(
         title=song_title,
         artist=artist,
@@ -88,8 +98,8 @@ def share_song(
         shared_by=user_id,
         shared_at=datetime.utcnow()
     )
-    
+
     db.add(shared_song)
-    db.commit()
-    db.refresh(shared_song)
+    await db.commit()  # 비동기 커밋
+    await db.refresh(shared_song)
     return shared_song
