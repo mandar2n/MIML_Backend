@@ -24,5 +24,4 @@ async def get_db():
         try:
             yield session
         finally:
-            #await session.close()
             pass

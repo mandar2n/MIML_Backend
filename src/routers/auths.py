@@ -35,7 +35,7 @@ async def register_user(request: RegisterRequest, db: AsyncSession = Depends(get
 @router.post("/login")
 async def login_user(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).filter(User.email == request.email))
-    user = result.scalars().first()  # fetch one user
+    user = result.scalars().first()
     
     if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -45,5 +45,5 @@ async def login_user(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/logout")
-def logout_user():
+async def logout_user():
     return {"msg": "User logged out. Please clear the token on the client side."}
