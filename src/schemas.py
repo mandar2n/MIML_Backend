@@ -56,6 +56,23 @@ class UserResponse(UserBase):
     class Config:
         orm_mode = True  # ORM 모델을 기반으로 직렬화 가능하도록 설정
 
+class FollowerInfo(BaseModel):
+    userId: int
+    name: str
+    profile_image_url: Optional[str]
+
+class UserProfileWithFollowers(BaseModel):
+    userId: int
+    email: str
+    name: str
+    profile_image_url: Optional[str]
+    createdAt: datetime
+    followers: List[FollowerInfo]
+    following: List[FollowerInfo]
+
+    class Config:
+        orm_mode = True
+
 class FollowRequest(BaseModel):
     follower_id: int
 
