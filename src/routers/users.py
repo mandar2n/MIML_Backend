@@ -5,10 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.database import get_db
-from src.schemas import UserCreate, UserResponse, FollowRequest, SongResponse
+from src.schemas import UserCreate, UserResponse, FollowRequest, SongResponse,UserUpdate
 from src.models import User, Follow, Song
-from src.crud import create_user, get_user_by_email, search_user_by_name, add_follow
+from src.crud import create_user, get_user_by_email, search_user_by_name, add_follow,update_user_profile
 from typing import List
+from src.auth.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -56,6 +57,24 @@ async def get_user_profile(user_id: int, db: AsyncSession = Depends(get_db)):
             } for song in shared_songs
         ]
     }
+
+@router.put("/profile/{user_id}")
+async def update_user_profile_endpoint(
+    user_id: int, 
+    user_update: UserUpdate, 
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    # 현재 사용자가 요청한 user_id와 동일한지 확인
+    if current_user.userId != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this profile")
+
+    user = await update_user_profile(db, user_id, user_update)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"message": "Profile updated successfully", "user": user}
 
 @router.get("/profile/{user_id}/following", response_model=List[UserResponse])
 async def get_following_list(user_id: int, db: AsyncSession = Depends(get_db)):

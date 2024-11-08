@@ -6,7 +6,8 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 from src.models import User, Song, Follow, Playlist
 from typing import Optional, List
-
+from src.schemas import UserUpdate
+from src.auth.security import get_password_hash
 
 async def create_user(db: AsyncSession, email: str, hashed_password: str, name: str, profile_image_url: Optional[str] = None):
     user = User(
@@ -18,6 +19,28 @@ async def create_user(db: AsyncSession, email: str, hashed_password: str, name: 
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    return user
+
+async def update_user_profile(db: AsyncSession, user_id: int, user_update: UserUpdate):
+    result = await db.execute(select(User).where(User.userId == user_id))
+    user = result.scalars().first()
+
+    if not user:
+        return None
+
+    # 업데이트할 데이터만 갱신
+    if user_update.email:
+        user.email = user_update.email
+    if user_update.password:
+        user.hashed_pw = get_password_hash(user_update.password)
+    if user_update.name:
+        user.name = user_update.name
+    if user_update.profile_image_url:
+        user.profile_image_url = user_update.profile_image_url
+
+    await db.commit()
+    await db.refresh(user)
+
     return user
 
 async def get_user_by_email(db: AsyncSession, email: str):
