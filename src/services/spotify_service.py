@@ -32,7 +32,7 @@ def get_song_info(song_name: str) -> Optional[List[Dict[str, str]]]:
                 "title": track['name'],
                 "artist": track['artists'][0]['name'],
                 "album": track['album']['name'],
-                "release_date": track['album']['release_date'],
+  
                 "spotify_url": track['external_urls']['spotify'],
                 "album_cover_url": album_cover_url,  # 앨범 커버 이미지 URL 추가
                 "uri": track['uri']  # URI 추가

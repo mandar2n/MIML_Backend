@@ -19,7 +19,7 @@ async def share_song_to_feed(song: SongShare, db: Session = Depends(get_db)):
         song_title=song.title,
         artist=song.artist,
         album=song.album,
-        spotify_url=song.spotify_url,
+        spotify_url=song.spotify_url,   
         album_cover_url=song.album_cover_url,
         uri=song.uri
     )
