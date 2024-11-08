@@ -108,6 +108,7 @@ class ChartResponse(BaseModel):
     """
     title: str
     artist: str
+    uri: str  
     share_count: int
 
 class RegisterRequest(BaseModel):
