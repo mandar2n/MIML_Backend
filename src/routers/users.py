@@ -1,3 +1,6 @@
+# src/routers/users.py
+
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -18,7 +21,7 @@ async def create_profile(user: UserCreate, db: AsyncSession = Depends(get_db)):
     new_user = await create_user(
         db=db,
         email=user.email,
-        hashed_password=user.password,
+        hashed_pw=user.password,
         name=user.name,
         profile_image_url=user.profile_image_url
     )
@@ -27,13 +30,13 @@ async def create_profile(user: UserCreate, db: AsyncSession = Depends(get_db)):
 
 @router.get("/profile/{user_id}", response_model=dict)
 async def get_user_profile(user_id: int, db: AsyncSession = Depends(get_db)):
-    user_result = await db.execute(select(User).where(User.id == user_id))
+    user_result = await db.execute(select(User).where(User.userId == user_id))
     user = user_result.scalars().first()
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    shared_songs_result = await db.execute(select(Song).where(Song.shared_by == user_id))
+    shared_songs_result = await db.execute(select(Song).where(Song.sharedBy == user_id))
     shared_songs = shared_songs_result.scalars().all()
 
     return {
@@ -41,7 +44,7 @@ async def get_user_profile(user_id: int, db: AsyncSession = Depends(get_db)):
             "email": user.email,
             "name": user.name,
             "profile_image_url": user.profile_image_url,
-            "created_at": user.created_at
+            "createdAt": user.createdAt
         },
         "shared_songs": [
             {
@@ -49,14 +52,14 @@ async def get_user_profile(user_id: int, db: AsyncSession = Depends(get_db)):
                 "artist": song.artist,
                 "album": song.album,
                 "spotify_url": song.spotify_url,
-                "shared_at": song.shared_at
+                "sharedAt": song.sharedAt
             } for song in shared_songs
         ]
     }
 
 @router.get("/profile/{user_id}/following", response_model=List[UserResponse])
 async def get_following_list(user_id: int, db: AsyncSession = Depends(get_db)):
-    following_result = await db.execute(select(User).join(Follow, Follow.following_id == User.id).where(Follow.follower_id == user_id))
+    following_result = await db.execute(select(User).join(Follow, Follow.following_id == User.userId).where(Follow.follower_id == user_id))
     following_users = following_result.scalars().all()
 
     if not following_users:
@@ -66,13 +69,21 @@ async def get_following_list(user_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/profile/{user_id}/followers", response_model=List[UserResponse])
 async def get_followers_list(user_id: int, db: AsyncSession = Depends(get_db)):
-    followers_result = await db.execute(select(User).join(Follow, Follow.follower_id == User.id).where(Follow.following_id == user_id))
+    followers_result = await db.execute(select(User).join(Follow, Follow.follower_id == User.userId).where(Follow.following_id == user_id))
     followers = followers_result.scalars().all()
 
     if not followers:
         raise HTTPException(status_code=404, detail="No followers found")
 
     return followers
+
+@router.get("/search", response_model=List[UserResponse])
+async def search_user(name: str, db: AsyncSession = Depends(get_db)):
+    users = await search_user_by_name(db, name)
+    if not users:
+        raise HTTPException(status_code=404, detail="No users found with the given name")
+    return users
+
 
 @router.post("/{user_id}/follow")
 async def follow_user(user_id: int, request: FollowRequest, db: AsyncSession = Depends(get_db)):

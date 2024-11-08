@@ -1,3 +1,6 @@
+# src/routers/feed.py
+
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -25,8 +28,8 @@ async def get_user_feed(user_id: int, db: AsyncSession = Depends(get_db)):
     # 팔로우한 유저들이 공유한 노래 목록 조회
     shared_songs_result = await db.execute(
         select(Song)
-        .where(Song.shared_by.in_(following_ids))
-        .order_by(Song.shared_at.desc())  # 최신 공유 순으로 정렬
+        .where(Song.sharedBy.in_(following_ids))
+        .order_by(Song.sharedAt.desc())  # 최신 공유 순으로 정렬
     )
     shared_songs = shared_songs_result.scalars().all()
 

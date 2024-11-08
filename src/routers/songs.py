@@ -15,7 +15,7 @@ async def share_song_to_feed(song: SongShare, db: Session = Depends(get_db)):
     """
     shared_song = await share_song(
         db=db,
-        user_id=song.user_id,
+        user_id=song.userId,
         song_title=song.title,
         artist=song.artist,
         album=song.album,

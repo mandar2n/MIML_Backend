@@ -25,9 +25,9 @@ class SongResponse(SongBase):
     """
     응답으로 사용할 노래 스키마
     """
-    id: int
-    shared_at: datetime
-    shared_by: int
+    songId: int
+    sharedAt: datetime
+    sharedBy: int
 
     class Config:
         orm_mode = True  # ORM 모델을 기반으로 직렬화 가능하도록 설정
@@ -50,8 +50,8 @@ class UserResponse(UserBase):
     """
     사용자 응답 데이터의 스키마
     """
-    id: int
-    created_at: datetime
+    userId: int
+    createdAt: datetime
 
     class Config:
         orm_mode = True  # ORM 모델을 기반으로 직렬화 가능하도록 설정
@@ -63,7 +63,7 @@ class SongShare(BaseModel):
     """
     사용자가 노래를 공유할 때 사용하는 스키마
     """
-    user_id: int
+    userId: int
     title: str
     artist: str
     album: Optional[str] = None
