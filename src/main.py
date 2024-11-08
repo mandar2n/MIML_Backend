@@ -4,7 +4,7 @@
 from fastapi import FastAPI
 from src.database import engine
 from src.models import Base
-from src.routers import spotify, songs, users, feed, auths
+from src.routers import spotify, songs, users, feed, auths,charts
 from contextlib import asynccontextmanager
 from src.database import init_db
 from contextlib import asynccontextmanager
@@ -24,7 +24,7 @@ app.include_router(auths.router, prefix="/auths", tags=["Auths"])
 app.include_router(feed.router, prefix="/feed", tags=["Feed"])
 # app.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 # app.include_router(playlists.router, prefix="/playlists", tags=["Playlists"])
-# app.include_router(charts.router, prefix="/charts", tags=["Charts"])
+app.include_router(charts.router, prefix="/charts", tags=["Charts"])
 
 @app.get("/")
 def read_root():

@@ -88,6 +88,14 @@ class SongShare(BaseModel):
     album_cover_url: Optional[str] = None
     uri: Optional[str] = None
     
+class ChartResponse(BaseModel):
+    """
+    차트 응답을 위한 스키마
+    """
+    title: str
+    artist: str
+    share_count: int
+
 class RegisterRequest(BaseModel):
     email: str
     password: str

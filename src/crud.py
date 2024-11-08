@@ -54,13 +54,13 @@ async def get_daily_chart(db: AsyncSession):
     """ 일간 차트: 하루 동안 공유된 노래의 공유 횟수를 집계합니다. """
     today = datetime.utcnow().date()
     result = await db.execute(
-        select(Song.title, Song.artist, func.count(Song.songId).label('share_count'))  # songId로 변경
-        .filter(func.date(Song.sharedAt) == today)  # sharedAt으로 변경
+        select(Song.title, Song.artist, func.count(Song.songId).label('share_count'))
+        .filter(func.date(Song.sharedAt) == today)
         .group_by(Song.title, Song.artist)
         .order_by(func.count(Song.songId).desc())
     )
-    return result.all()
-
+    # 필요한 만큼의 데이터를 가져오기 (예: 10개)
+    return result.fetchmany(10)
 
 async def get_weekly_chart(db: AsyncSession):
     """ 주간 차트: 일주일 동안 공유된 노래의 공유 횟수를 집계합니다. """
@@ -71,8 +71,8 @@ async def get_weekly_chart(db: AsyncSession):
         .group_by(Song.title, Song.artist)
         .order_by(func.count(Song.songId).desc())
     )
-    return result.all()
-
+    # 필요한 만큼의 데이터를 가져오기 (예: 10개)
+    return result.fetchmany(10)
 
 async def get_monthly_chart(db: AsyncSession):
     """ 월간 차트: 한 달 동안 공유된 노래의 공유 횟수를 집계합니다. """
@@ -83,7 +83,8 @@ async def get_monthly_chart(db: AsyncSession):
         .group_by(Song.title, Song.artist)
         .order_by(func.count(Song.songId).desc())
     )
-    return result.all()
+    # 필요한 만큼의 데이터를 가져오기 (예: 10개)
+    return result.fetchmany(10)
 
 
 async def share_song(
