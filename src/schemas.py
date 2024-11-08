@@ -10,10 +10,11 @@ class SongBase(BaseModel):
     """
     title: str
     artist: str
-    album: Optional[str] = None
-    spotify_url: str
+    # album: Optional[str] = None
+    # spotify_url: str
     album_cover_url: Optional[str] = None
     uri: Optional[str] = None
+    
 
 class SongCreate(SongBase):
     """
@@ -32,6 +33,20 @@ class SongResponse(SongBase):
     class Config:
         orm_mode = True  # ORM 모델을 기반으로 직렬화 가능하도록 설정
 
+
+class SongDetailResponse(BaseModel):
+    """
+    노래 상세 정보 스키마
+    """
+    title: str
+    artist: str
+    album: str
+    spotify_url: str
+    album_cover_url: Optional[str] = None
+    uri: str
+
+    class Config:
+        orm_mode = True
 class UserBase(BaseModel):
     """
     사용자 기본 정보를 담는 스키마
@@ -80,7 +95,6 @@ class SongShare(BaseModel):
     """
     사용자가 노래를 공유할 때 사용하는 스키마
     """
-    userId: int
     title: str
     artist: str
     album: Optional[str] = None

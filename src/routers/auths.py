@@ -25,7 +25,7 @@ async def register_user(request: RegisterRequest, db: AsyncSession = Depends(get
     # Create a new user
     new_user = User(
         email=request.email,
-        hashed_password=get_password_hash(request.password),
+        hashed_pw=get_password_hash(request.password),
         name=request.name
     )
     db.add(new_user)
@@ -39,7 +39,7 @@ async def login_user(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).filter(User.email == request.email))
     user = result.scalars().first()
     
-    if not user or not verify_password(request.password, user.hashed_password):
+    if not user or not verify_password(request.password, user.hashed_pw):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
     access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=30))

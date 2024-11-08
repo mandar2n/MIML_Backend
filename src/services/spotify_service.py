@@ -31,13 +31,35 @@ def get_song_info(song_name: str) -> Optional[List[Dict[str, str]]]:
             song_info = {
                 "title": track['name'],
                 "artist": track['artists'][0]['name'],
-                "album": track['album']['name'],
-  
-                "spotify_url": track['external_urls']['spotify'],
+                # "album": track['album']['name'],
+                # "spotify_url": track['external_urls']['spotify'],
                 "album_cover_url": album_cover_url,  # 앨범 커버 이미지 URL 추가
                 "uri": track['uri']  # URI 추가
             }
             song_list.append(song_info)
         return song_list
     else:
+        return None
+
+def get_song_details(song_uri: str) -> Optional[Dict[str, str]]:
+    """
+    URI를 사용하여 노래의 상세 정보를 가져옵니다.
+    """
+    try:
+        track = spotify.track(song_uri)
+        album_images = track['album']['images']
+        album_cover_url = album_images[0]['url'] if album_images else None
+
+        song_info = {
+            "title": track['name'],
+            "artist": track['artists'][0]['name'],
+            "album": track['album']['name'],
+            # "release_date": track['album']['release_date'],
+            "spotify_url": track['external_urls']['spotify'],
+            "album_cover_url": album_cover_url,
+            "uri": track['uri']
+        }
+        return song_info
+    except Exception as e:
+        print(f"Error fetching song details: {e}")
         return None
