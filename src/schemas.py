@@ -124,7 +124,13 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: str
+    profile_image_url: Optional[str] = "default_image_url"  # 기본값 설정
 
 class LoginRequest(BaseModel):
     email: str
     password: str
+    
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    userId: int
