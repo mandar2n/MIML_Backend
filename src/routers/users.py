@@ -13,22 +13,6 @@ from src.auth.dependencies import get_current_user
 
 router = APIRouter()
 
-@router.post("/profile", response_model=UserResponse)
-async def create_profile(user: UserCreate, db: AsyncSession = Depends(get_db)):
-    db_user = await get_user_by_email(db, email=user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    new_user = await create_user(
-        db=db,
-        email=user.email,
-        hashed_pw=user.password,
-        name=user.name,
-        profile_image_url=user.profile_image_url
-    )
-    
-    return new_user
-
 @router.get("/profile/{user_id}", response_model=dict)
 async def get_user_profile(user_id: int, db: AsyncSession = Depends(get_db)):
     user_result = await db.execute(select(User).where(User.userId == user_id))
