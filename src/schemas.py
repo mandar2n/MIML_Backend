@@ -163,3 +163,33 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str
     userId: int
+    
+# Playlist 생성 요청에 대한 스키마
+class PlaylistCreate(BaseModel):
+    name: str
+    song_ids: Optional[List[int]] = []  # 사용자 정의 플레이리스트에 추가할 노래 ID 목록
+
+# Playlist 응답에 대한 스키마
+class SongInPlaylist(BaseModel):
+    songId: int
+    title: str
+    artist: str
+    album: str
+    spotify_url: str
+    album_cover_url: Optional[str]
+    uri: Optional[str]
+    sharedBy: int
+    sharedAt: datetime
+
+    class Config:
+        orm_mode = True  # SQLAlchemy 모델과의 호환성
+
+class PlaylistResponse(BaseModel):
+    playlistId: int
+    name: str
+    createdAt: datetime
+    tracks: List[SongInPlaylist]  # 플레이리스트에 포함된 노래 목록
+
+    class Config:
+        orm_mode = True
+        

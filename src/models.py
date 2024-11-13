@@ -48,6 +48,18 @@ class Song(Base):
     user = relationship("User", back_populates="songs")
     charts = relationship("Chart", secondary=chart_songs, back_populates="songs")
 
+    def to_dict(self):
+        return {
+            "songId": self.songId,
+            "title": self.title,
+            "artist": self.artist,
+            "album": self.album,
+            "spotify_url": self.spotify_url,
+            "album_cover_url": self.album_cover_url,
+            "uri": self.uri,
+            "sharedBy": self.sharedBy,
+            "sharedAt": self.sharedAt
+        }
 
 class Follow(Base):
     __tablename__ = "follows"

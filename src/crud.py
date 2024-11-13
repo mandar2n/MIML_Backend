@@ -1,13 +1,17 @@
 # src/crud.py
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from src.models import User, Song, Follow, Playlist
 from typing import Optional, List
-from src.schemas import UserUpdate
+from src.schemas import PlaylistCreate, UserUpdate
 from src.auth.security import get_password_hash
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def create_user(db: AsyncSession, email: str, hashed_password: str, name: str, profile_image_url: Optional[str] = None):
     user = User(
@@ -135,3 +139,67 @@ async def share_song(
     await db.commit()  # 비동기 커밋
     await db.refresh(shared_song)
     return shared_song
+
+async def get_today_playlist(user_id: int, db: AsyncSession):
+    try:
+        now = datetime.utcnow()
+        # 한국 시간 18시 (UTC 기준 9시)에 플레이리스트 생성
+        if now.hour < 9:
+            raise HTTPException(status_code=400, detail="Today's playlist is only available after 18:00")
+
+        # 지난 24시간 기준으로 시작 시각 계산
+        past_24_hours = now - timedelta(hours=24)
+
+        # 유저 검색
+        result = await db.execute(select(User).where(User.userId == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # 사용자가 팔로우하는 유저들의 ID 가져오기
+        followed_user_ids = [follow.following_id for follow in user.following]
+        if not followed_user_ids:
+            followed_user_ids = []  # 비어 있는 경우 빈 리스트로 처리
+            
+        shared_songs_result = await db.execute(
+            select(Song).where(
+                Song.sharedAt >= past_24_hours,
+                Song.sharedBy.in_([user_id] + followed_user_ids)
+            )
+        )
+        shared_songs = await shared_songs_result.scalars().all()
+
+        return shared_songs
+    
+    except Exception as e:
+        logger.error(f"Error in get_today_playlist: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    
+async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, user_id: int):
+    
+    # 한 사용자가 이미 마이 플레이리스트를 가지고 있는지 확인
+    existing_playlist = await db.execute(
+        select(Playlist).where(Playlist.user_id == user_id)
+    )
+    existing_playlist = existing_playlist.scalar_one_or_none()
+
+    if existing_playlist:
+        raise HTTPException(
+            status_code=400,
+            detail="User already has a playlist. Cannot create another one."
+        )
+
+    # 새로운 플레이리스트 생성
+    new_playlist = Playlist(
+        name=playlist_create.name,
+        user_id=user_id,
+        createdAt=datetime.utcnow()
+    )
+
+    db.add(new_playlist)
+    await db.commit()
+    await db.refresh(new_playlist)
+
+    return new_playlist
+    
