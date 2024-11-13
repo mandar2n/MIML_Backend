@@ -14,12 +14,25 @@ from src.auth.dependencies import get_current_user
 router = APIRouter()
 
 @router.get("/profile/{user_id}", response_model=dict)
-async def get_user_profile(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user_profile(
+    user_id: int, 
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     user_result = await db.execute(select(User).where(User.userId == user_id))
     user = user_result.scalars().first()
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # 현재 사용자가 해당 유저를 팔로우하고 있는지 확인
+    follow_status_result = await db.execute(
+        select(Follow).where(
+            Follow.follower_id == current_user.userId,
+            Follow.following_id == user_id
+        )
+    )
+    is_following = follow_status_result.scalar() is not None  # 팔로우하고 있으면 True
 
     shared_songs_result = await db.execute(select(Song).where(Song.sharedBy == user_id))
     shared_songs = shared_songs_result.scalars().all()
@@ -31,6 +44,7 @@ async def get_user_profile(user_id: int, db: AsyncSession = Depends(get_db)):
             "profile_image_url": user.profile_image_url,
             "createdAt": user.createdAt
         },
+        "is_following": is_following,  # 팔로우 여부 추가
         "shared_songs": [
             {
                 "title": song.title,
@@ -41,7 +55,6 @@ async def get_user_profile(user_id: int, db: AsyncSession = Depends(get_db)):
             } for song in shared_songs
         ]
     }
-
 @router.put("/profile/{user_id}")
 async def update_user_profile_endpoint(
     user_id: int, 
