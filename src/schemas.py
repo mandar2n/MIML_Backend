@@ -118,6 +118,7 @@ class ChartResponse(BaseModel):
     title: str
     artist: str
     uri: str  
+    album_cover_url: Optional[str]  # 앨범 커버 URL 필드 추가
     share_count: int
 
 class RegisterRequest(BaseModel):

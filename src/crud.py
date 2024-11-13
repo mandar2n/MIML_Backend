@@ -77,9 +77,9 @@ async def get_daily_chart(db: AsyncSession):
     """ 일간 차트: 하루 동안 공유된 노래의 공유 횟수를 집계합니다. """
     today = datetime.utcnow().date()
     result = await db.execute(
-        select(Song.title, Song.artist,Song.uri, func.count(Song.songId).label('share_count'))
+        select(Song.title, Song.artist,Song.uri,Song.album_cover_url, func.count(Song.songId).label('share_count'))
         .filter(func.date(Song.sharedAt) == today)
-        .group_by(Song.title, Song.artist, Song.uri)
+        .group_by(Song.title, Song.artist, Song.uri, Song.album_cover_url)
         .order_by(func.count(Song.songId).desc())
     )
     # 필요한 만큼의 데이터를 가져오기 (예: 10개)
@@ -89,9 +89,9 @@ async def get_weekly_chart(db: AsyncSession):
     """ 주간 차트: 일주일 동안 공유된 노래의 공유 횟수를 집계합니다. """
     start_of_week = datetime.utcnow().date() - timedelta(days=datetime.utcnow().date().weekday())
     result = await db.execute(
-        select(Song.title, Song.artist, Song.uri,func.count(Song.songId).label('share_count'))
+        select(Song.title, Song.artist, Song.uri,Song.album_cover_url,func.count(Song.songId).label('share_count'))
         .filter(func.date(Song.sharedAt) >= start_of_week)
-        .group_by(Song.title, Song.artist, Song.uri)
+        .group_by(Song.title, Song.artist, Song.uri, Song.album_cover_url)
         .order_by(func.count(Song.songId).desc())
     )
     # 필요한 만큼의 데이터를 가져오기 (예: 10개)
@@ -101,9 +101,9 @@ async def get_monthly_chart(db: AsyncSession):
     """ 월간 차트: 한 달 동안 공유된 노래의 공유 횟수를 집계합니다. """
     start_of_month = datetime.utcnow().replace(day=1).date()
     result = await db.execute(
-        select(Song.title, Song.artist, Song.uri,func.count(Song.songId).label('share_count'))
+        select(Song.title, Song.artist, Song.uri,Song.album_cover_url,func.count(Song.songId).label('share_count'))
         .filter(func.date(Song.sharedAt) >= start_of_month)
-        .group_by(Song.title, Song.artist, Song.uri)
+        .group_by(Song.title, Song.artist, Song.uri, Song.album_cover_url)
         .order_by(func.count(Song.songId).desc())
     )
     # 필요한 만큼의 데이터를 가져오기 (예: 10개)
