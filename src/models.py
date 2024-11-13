@@ -43,6 +43,7 @@ class Song(Base):
     uri = Column(String, nullable=True)
     sharedBy = Column(Integer, ForeignKey("users.userId"))  # 변수명 변경: shared_by -> sharedBy
     sharedAt = Column(DateTime, default=datetime.utcnow)  # 변수명 변경: shared_at -> sharedAt
+    reaction = Column(Integer, default=0)  # 반응 수 기본값 0
 
     user = relationship("User", back_populates="songs")
     charts = relationship("Chart", secondary=chart_songs, back_populates="songs")

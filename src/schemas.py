@@ -80,6 +80,34 @@ class UserUpdate(BaseModel):
     class Config:
         orm_mode = True
 
+class SharedSongDetail(BaseModel):
+    """
+    공유된 노래의 세부 정보를 담는 스키마
+    """
+    title: str
+    artist: str
+    album_cover_url: Optional[str] = None
+    shared_at: datetime
+    reaction: Optional[int] = 0
+    spotify_url: str
+    uri: str
+
+    class Config:
+        orm_mode = True
+
+class UserFeedResponse(BaseModel):
+    """
+    사용자의 정보와 공유된 노래 목록을 담는 스키마
+    """
+    id: int
+    name: str
+    profileImage: Optional[str] = None
+    Song: List[SharedSongDetail]
+
+    class Config:
+        orm_mode = True
+
+
 class FollowerInfo(BaseModel):
     userId: int
     name: str
