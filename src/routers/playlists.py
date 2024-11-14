@@ -2,10 +2,10 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from src.crud import create_playlist, get_today_playlist
+from src.crud import add_song_to_playlist, create_playlist, get_today_playlist, remove_song_from_playlist
 from src.database import get_db
 from src.models import User, Song
-from src.schemas import PlaylistCreate, PlaylistResponse, SongInPlaylist
+from src.schemas import PlaylistCreate, PlaylistResponse, SongAddRequest, SongInPlaylist, SongResponse
 
 router = APIRouter()
 
@@ -50,7 +50,17 @@ async def create_playlist_endpoint(
         raise HTTPException(status_code=500, detail="Internal server error")
 
     
-@router.put("/{playlist_id}")
-async def update_playlist(playlist_id: int, db: AsyncSession = Depends(get_db)):
-    # 특정 플레이리스트에 음악 추가 또는 수정
-    pass  # 추후 구현 필요
+@router.put("/{playlistId}", response_model=SongResponse)
+async def update_playlist(playlistId: int, request: SongAddRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        return await add_song_to_playlist(db, playlistId, request.songId)
+    except HTTPException as e:
+        raise e
+    
+    
+@router.delete("/{playlistId}", response_model=SongResponse)
+async def delete_song_from_playlist(playlistId: int, request: SongAddRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        return await remove_song_from_playlist(db, playlistId, request.songId)
+    except HTTPException as e:
+        raise e

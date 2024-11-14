@@ -144,7 +144,7 @@ async def get_today_playlist(user_id: int, db: AsyncSession):
     try:
         now = datetime.utcnow()
         # 한국 시간 18시 (UTC 기준 9시)에 플레이리스트 생성
-        if now.hour < 9:
+        if now.hour < 1:
             raise HTTPException(status_code=400, detail="Today's playlist is only available after 18:00")
 
         # 지난 24시간 기준으로 시작 시각 계산
@@ -167,7 +167,7 @@ async def get_today_playlist(user_id: int, db: AsyncSession):
                 Song.sharedBy.in_([user_id] + followed_user_ids)
             )
         )
-        shared_songs = await shared_songs_result.scalars().all()
+        shared_songs = (await shared_songs_result.scalars()).all()
 
         return shared_songs
     
@@ -203,3 +203,36 @@ async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, use
 
     return new_playlist
     
+    
+async def add_song_to_playlist(db: AsyncSession, playlist_id: int, song_id: int):
+    # 해당 노래가 songs 테이블에 존재하는지 확인
+    result = await db.execute(select(Song).filter(Song.songId == song_id))
+    song = result.scalars().first()
+    if not song:
+        raise HTTPException(status_code=404, detail="Song not found")
+
+    # 해당 플레이리스트에 노래 추가
+    result = await db.execute(select(Playlist).filter(Playlist.playlistId == playlist_id))
+    playlist = result.scalars().first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+
+    playlist.songs.append(song)
+    await db.commit()
+    return {"message": "Song added to playlist"}
+
+
+async def remove_song_from_playlist(db: AsyncSession, playlist_id: int, song_id: int):
+    result = await db.execute(select(Playlist).filter(Playlist.playlistId == playlist_id))
+    playlist = result.scalars().first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+
+    result = await db.execute(select(Song).filter(Song.songId == song_id))
+    song = result.scalars().first()
+    if not song or song not in playlist.songs:
+        raise HTTPException(status_code=404, detail="Song not in playlist")
+
+    playlist.songs.remove(song)
+    await db.commit()
+    return {"message": "Song removed from playlist"}

@@ -193,3 +193,9 @@ class PlaylistResponse(BaseModel):
     class Config:
         orm_mode = True
         
+class SongAddRequest(BaseModel):
+    songId: int
+
+class SongResponse(BaseModel):
+    message: str
+        
