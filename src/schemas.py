@@ -143,6 +143,7 @@ class ChartResponse(BaseModel):
     """
     차트 응답을 위한 스키마
     """
+    rank: int
     title: str
     artist: str
     uri: str  

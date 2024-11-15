@@ -78,41 +78,74 @@ async def create_song(db: AsyncSession, title: str, artist: str, album: str, spo
 
 
 async def get_daily_chart(db: AsyncSession):
-    """ 일간 차트: 하루 동안 공유된 노래의 공유 횟수를 집계합니다. """
+    """ 일간 차트: 하루 동안 공유된 노래의 공유 횟수를 집계하고 순위를 부여합니다. """
     today = datetime.utcnow().date()
     result = await db.execute(
-        select(Song.title, Song.artist,Song.uri,Song.album_cover_url, func.count(Song.songId).label('share_count'))
+        select(Song.title, Song.artist, Song.uri, Song.album_cover_url, func.count(Song.songId).label('share_count'))
         .filter(func.date(Song.sharedAt) == today)
         .group_by(Song.title, Song.artist, Song.uri, Song.album_cover_url)
         .order_by(func.count(Song.songId).desc())
     )
-    # 필요한 만큼의 데이터를 가져오기 (예: 10개)
-    return result.fetchmany(10)
+    # 순위를 기반으로 ID 추가
+    chart_data = result.fetchmany(10)
+    return [
+        {
+            "rank": idx + 1,  # 순위 기반 ID
+            "title": row.title,
+            "artist": row.artist,
+            "uri": row.uri,
+            "album_cover_url": row.album_cover_url,
+            "share_count": row.share_count
+        }
+        for idx, row in enumerate(chart_data)
+    ]
 
 async def get_weekly_chart(db: AsyncSession):
-    """ 주간 차트: 일주일 동안 공유된 노래의 공유 횟수를 집계합니다. """
+    """ 주간 차트: 일주일 동안 공유된 노래의 공유 횟수를 집계하고 순위를 부여합니다. """
     start_of_week = datetime.utcnow().date() - timedelta(days=datetime.utcnow().date().weekday())
     result = await db.execute(
-        select(Song.title, Song.artist, Song.uri,Song.album_cover_url,func.count(Song.songId).label('share_count'))
+        select(Song.title, Song.artist, Song.uri, Song.album_cover_url, func.count(Song.songId).label('share_count'))
         .filter(func.date(Song.sharedAt) >= start_of_week)
         .group_by(Song.title, Song.artist, Song.uri, Song.album_cover_url)
         .order_by(func.count(Song.songId).desc())
     )
-    # 필요한 만큼의 데이터를 가져오기 (예: 10개)
-    return result.fetchmany(10)
+    # 순위를 기반으로 ID 추가
+    chart_data = result.fetchmany(10)
+    return [
+        {
+            "rank": idx + 1,  # 순위 기반 ID
+            "title": row.title,
+            "artist": row.artist,
+            "uri": row.uri,
+            "album_cover_url": row.album_cover_url,
+            "share_count": row.share_count
+        }
+        for idx, row in enumerate(chart_data)
+    ]
+
 
 async def get_monthly_chart(db: AsyncSession):
-    """ 월간 차트: 한 달 동안 공유된 노래의 공유 횟수를 집계합니다. """
+    """ 월간 차트: 한 달 동안 공유된 노래의 공유 횟수를 집계하고 순위를 부여합니다. """
     start_of_month = datetime.utcnow().replace(day=1).date()
     result = await db.execute(
-        select(Song.title, Song.artist, Song.uri,Song.album_cover_url,func.count(Song.songId).label('share_count'))
+        select(Song.title, Song.artist, Song.uri, Song.album_cover_url, func.count(Song.songId).label('share_count'))
         .filter(func.date(Song.sharedAt) >= start_of_month)
         .group_by(Song.title, Song.artist, Song.uri, Song.album_cover_url)
         .order_by(func.count(Song.songId).desc())
     )
-    # 필요한 만큼의 데이터를 가져오기 (예: 10개)
-    return result.fetchmany(10)
-
+    # 순위를 기반으로 ID 추가
+    chart_data = result.fetchmany(10)
+    return [
+        {
+            "rank": idx + 1,  # 순위 기반 ID
+            "title": row.title,
+            "artist": row.artist,
+            "uri": row.uri,
+            "album_cover_url": row.album_cover_url,
+            "share_count": row.share_count
+        }
+        for idx, row in enumerate(chart_data)
+    ]
 
 async def share_song(
     db: AsyncSession,
