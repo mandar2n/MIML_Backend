@@ -15,6 +15,14 @@ chart_songs = Table(
     Column("song_id", Integer, ForeignKey("songs.songId"), primary_key=True)
 )
 
+# 중간 테이블 정의 (플레이리스트와 노래의 다대다 관계)
+playlist_songs = Table(
+    'playlist_songs',
+    Base.metadata,
+    Column('playlist_id', Integer, ForeignKey('playlists.playlistId'), primary_key=True),
+    Column('song_id', Integer, ForeignKey('songs.songId'), primary_key=True)
+)
+
 class User(Base):
     __tablename__ = "users"
 
@@ -47,7 +55,8 @@ class Song(Base):
 
     user = relationship("User", back_populates="songs")
     charts = relationship("Chart", secondary=chart_songs, back_populates="songs")
-
+    playlists = relationship("Playlist", secondary=playlist_songs, back_populates="songs")
+    
     def to_dict(self):
         return {
             "songId": self.songId,
@@ -80,9 +89,10 @@ class Playlist(Base):
     name = Column(String, nullable=False)
     user_id = Column(Integer, ForeignKey("users.userId"))  # 변수명 유지
     createdAt = Column(DateTime, default=datetime.utcnow)  # 변수명 변경: created_at -> createdAt
-
+    playlist_type = Column(String, nullable=False)  # "daily" 또는 "my" 로 오늘의 플레이리스트, 마이플레이리스트 구분
+    
     user = relationship("User", back_populates="playlists")
-
+    songs = relationship("Song", secondary=playlist_songs, back_populates="playlists")
 
 class Chart(Base):
     __tablename__ = "charts"
