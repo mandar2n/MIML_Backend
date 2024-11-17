@@ -168,7 +168,8 @@ class LoginResponse(BaseModel):
 # Playlist 생성 요청에 대한 스키마
 class PlaylistCreate(BaseModel):
     name: str
-    song_ids: Optional[List[int]] = []  # 사용자 정의 플레이리스트에 추가할 노래 ID 목록
+    song_ids: Optional[List[int]] = []  # 플레이리스트에 추가할 노래 ID 목록
+    playlist_type: str  # 'daily' 또는 'my'
 
 # Playlist 응답에 대한 스키마
 class SongInPlaylist(BaseModel):
@@ -188,6 +189,7 @@ class SongInPlaylist(BaseModel):
 class PlaylistResponse(BaseModel):
     playlistId: int
     name: str
+    playlist_type: str
     createdAt: datetime
     tracks: List[SongInPlaylist]  # 플레이리스트에 포함된 노래 목록
 

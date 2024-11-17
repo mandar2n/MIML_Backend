@@ -1,5 +1,6 @@
 # src/crud.py
 
+from sqlite3 import IntegrityError
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -167,105 +168,144 @@ async def share_song(
         sharedBy=user_id,  # 컬럼명이 변경됨
         sharedAt=datetime.utcnow()  # 컬럼명이 변경됨
     )
-
+    
     db.add(shared_song)
     await db.commit()  # 비동기 커밋
     await db.refresh(shared_song)
     return shared_song
 
-async def get_today_playlist(user_id: int, db: AsyncSession):
+async def create_today_playlist(user_id: int, db: AsyncSession) -> List[Song]:
     try:
         now = datetime.utcnow()
         # 한국 시간 18시 (UTC 기준 9시)에 플레이리스트 생성
-        if now.hour < 1:
+        if now.hour < 9:
             raise HTTPException(status_code=400, detail="Today's playlist is only available after 18:00")
 
         # 지난 24시간 기준으로 시작 시각 계산
         past_24_hours = now - timedelta(hours=24)
 
-        # 유저 검색
-        result = await db.execute(select(User).where(User.userId == user_id))
-        user = result.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+        # 트랜잭션 내에서 비동기 작업 수행
+        async with db.begin():
+            # 사용자 검색
+            user_result = await db.execute(select(User).where(User.userId == user_id))
+            user = user_result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
 
-        # 사용자가 팔로우하는 유저들의 ID 가져오기
-        followed_user_ids = [follow.following_id for follow in user.following]
-        if not followed_user_ids:
-            followed_user_ids = []  # 비어 있는 경우 빈 리스트로 처리
-            
-        shared_songs_result = await db.execute(
-            select(Song).where(
-                Song.sharedAt >= past_24_hours,
-                Song.sharedBy.in_([user_id] + followed_user_ids)
+            # 사용자가 팔로우하는 유저들의 ID 가져오기
+            followed_user_ids_result = await db.execute(
+                select(Follow.following_id).where(Follow.follower_id == user_id)
             )
-        )
-        shared_songs = (await shared_songs_result.scalars()).all()
+            followed_user_ids = [row.following_id for row in followed_user_ids_result]
 
-        return shared_songs
+            if not followed_user_ids:
+                followed_user_ids = []  # 빈 리스트로 처리
+
+            # 24시간 내 공유된 노래들 조회
+            shared_songs_result = await db.execute(
+                select(Song).where(
+                    Song.sharedAt >= past_24_hours,
+                    Song.sharedBy.in_([user_id] + followed_user_ids)
+                )
+            )
+            shared_songs = shared_songs_result.scalars().all()
+            
+         
+            # 오늘의 플레이리스트 생성
+            playlist = Playlist(
+                name="Today's Playlist",
+                playlist_type="daily",
+                createdAt=datetime.utcnow(),
+                user_id=user_id
+            )
+            db.add(playlist)
+
+        # 비동기 작업이 끝난 후 commit() 및 refresh() 호출
+        await db.commit()  # 트랜잭션 커밋
+        await db.refresh(playlist)  # 트랜잭션이 닫힌 후에 refresh 호출
+
+        # 생성된 playlistId 반환
+        return shared_songs, playlist.playlistId
     
     except Exception as e:
-        logger.error(f"Error in get_today_playlist: {str(e)}")
+        logger.error(f"Error in create_today_playlist: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     
     
-async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, user_id: int):
-    
-    # 한 사용자가 이미 마이 플레이리스트를 가지고 있는지 확인
-    existing_playlist = await db.execute(
-        select(Playlist).where(Playlist.user_id == user_id)
-    )
-    existing_playlist = existing_playlist.scalar_one_or_none()
+async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, user_id: int, playlist_type: str):
+    try:
+        # 한 사용자가 이미 마이 플레이리스트를 가지고 있는지 확인
+        existing_playlist = await db.execute(
+            select(Playlist).where(
+                Playlist.user_id == user_id,
+                Playlist.playlist_type == playlist_type
+            )
+        )
+        existing_playlist = existing_playlist.scalar_one_or_none()
 
-    if existing_playlist:
-        raise HTTPException(
-            status_code=400,
-            detail="User already has a playlist. Cannot create another one."
+        if existing_playlist:
+            raise HTTPException(
+                status_code=400,
+                detail=f"User already has a {playlist_type} playlist. Cannot create another one."
+            )
+
+        # 새로운 플레이리스트 생성
+        new_playlist = Playlist(
+            name=playlist_create.name,
+            user_id=user_id,
+            playlist_type=playlist_type,
+            createdAt=datetime.utcnow()
         )
 
-    # 새로운 플레이리스트 생성
-    new_playlist = Playlist(
-        name=playlist_create.name,
-        user_id=user_id,
-        createdAt=datetime.utcnow()
-    )
-
-    db.add(new_playlist)
-    await db.commit()
-    await db.refresh(new_playlist)
-
-    return new_playlist
+        db.add(new_playlist)
+        await db.commit()
+        await db.refresh(new_playlist)
+        return new_playlist
+    
+    except IntegrityError as ie:
+        logger.error(f"Integrity error in create_playlist: {str(ie)}")
+        raise HTTPException(status_code=400, detail="Database integrity error")
+    except Exception as e:
+        logger.error(f"Error in create_playlist: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
     
     
 async def add_song_to_playlist(db: AsyncSession, playlist_id: int, song_id: int):
-    # 해당 노래가 songs 테이블에 존재하는지 확인
-    result = await db.execute(select(Song).filter(Song.songId == song_id))
-    song = result.scalars().first()
-    if not song:
-        raise HTTPException(status_code=404, detail="Song not found")
+    try:
+        result = await db.execute(select(Song).filter(Song.songId == song_id)) # 해당 노래가 songs 테이블에 존재하는지 확인
+        song = result.scalar_one_or_none()
+        if not song:
+            raise HTTPException(status_code=404, detail="Song not found")
 
-    # 해당 플레이리스트에 노래 추가
-    result = await db.execute(select(Playlist).filter(Playlist.playlistId == playlist_id))
-    playlist = result.scalars().first()
-    if not playlist:
-        raise HTTPException(status_code=404, detail="Playlist not found")
+        playlist_result = await db.execute(select(Playlist).where(Playlist.playlistId == playlist_id))
+        playlist = playlist_result.scalar_one_or_none()
+        if not playlist:
+            raise HTTPException(status_code=404, detail="Playlist not found")
 
-    playlist.songs.append(song)
-    await db.commit()
-    return {"message": "Song added to playlist"}
+        # 노래 추가
+        playlist.songs.append(song)
+        await db.commit()
+        return {"message": "Song added to playlist successfully"}
+    except Exception as e:
+        logger.error(f"Error in add_song_to_playlist: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def remove_song_from_playlist(db: AsyncSession, playlist_id: int, song_id: int):
-    result = await db.execute(select(Playlist).filter(Playlist.playlistId == playlist_id))
-    playlist = result.scalars().first()
-    if not playlist:
-        raise HTTPException(status_code=404, detail="Playlist not found")
+    try:
+        playlist_result = await db.execute(select(Playlist).where(Playlist.playlistId == playlist_id))
+        playlist = playlist_result.scalar_one_or_none()
+        if not playlist:
+            raise HTTPException(status_code=404, detail="Playlist not found")
 
-    result = await db.execute(select(Song).filter(Song.songId == song_id))
-    song = result.scalars().first()
-    if not song or song not in playlist.songs:
-        raise HTTPException(status_code=404, detail="Song not in playlist")
+        song = next((s for s in playlist.songs if s.songId == song_id), None)
+        if not song:
+            raise HTTPException(status_code=404, detail="Song not found in the playlist")
 
-    playlist.songs.remove(song)
-    await db.commit()
-    return {"message": "Song removed from playlist"}
+        # 노래 삭제
+        playlist.songs.remove(song)
+        await db.commit()
+        return {"message": "Song removed from playlist successfully"}
+    except Exception as e:
+        logger.error(f"Error in remove_song_from_playlist: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
