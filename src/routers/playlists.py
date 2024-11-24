@@ -6,12 +6,13 @@ from src.crud import add_song_to_playlist, create_today_playlist, create_playlis
 from src.database import get_db
 from src.models import User, Song
 from src.schemas import PlaylistCreate, PlaylistResponse, SongAddRequest, SongInPlaylist, SongResponse
+from src.auth.dependencies import get_current_user
 
 router = APIRouter()
 
 # 24시간 내 공유된 음악으로 오늘의 플레이리스트 생성
 @router.post("/today/{user_id}", response_model=PlaylistResponse)
-async def create_today_playlist_route(user_id: int, db: AsyncSession = Depends(get_db)):
+async def create_today_playlist_route(user_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         # create_today_playlist에서 반환한 결과 그대로 반환
         shared_songs, playlist_id = await create_today_playlist(user_id, db)
@@ -39,7 +40,8 @@ async def create_today_playlist_route(user_id: int, db: AsyncSession = Depends(g
 async def create_playlist_endpoint(
     user_id: int,  
     playlist: PlaylistCreate,  # 요청 본문에서 name 받기
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     try:
         # playlist_type을 'my'로 설정
@@ -65,7 +67,7 @@ async def create_playlist_endpoint(
 
     
 @router.put("/{playlistId}", response_model=SongResponse)
-async def update_playlist(playlistId: int, request: SongAddRequest, db: AsyncSession = Depends(get_db)):
+async def update_playlist(playlistId: int, request: SongAddRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         return await add_song_to_playlist(db, playlistId, request.songId)
     except HTTPException as e:
@@ -73,7 +75,7 @@ async def update_playlist(playlistId: int, request: SongAddRequest, db: AsyncSes
     
     
 @router.delete("/{playlistId}", response_model=SongResponse)
-async def delete_song_from_playlist(playlistId: int, request: SongAddRequest, db: AsyncSession = Depends(get_db)):
+async def delete_song_from_playlist(playlistId: int, request: SongAddRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         return await remove_song_from_playlist(db, playlistId, request.songId)
     except HTTPException as e:

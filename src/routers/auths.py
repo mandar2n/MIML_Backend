@@ -12,6 +12,7 @@ from src.auth.security import get_password_hash, verify_password
 from src.auth.auth import create_access_token
 from src.schemas import RegisterRequest, LoginRequest
 from datetime import timedelta
+from src.auth.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -61,5 +62,5 @@ async def login_user(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer", "userId": user.userId}
 
 @router.post("/logout")
-async def logout_user():
+async def logout_user(current_user: User = Depends(get_current_user)):
     return {"msg": "User logged out. Please clear the token on the client side."}

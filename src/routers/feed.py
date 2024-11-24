@@ -7,11 +7,12 @@ from src.database import get_db
 from src.models import User, Follow, Song
 from src.schemas import UserFeedResponse
 from typing import List
+from src.auth.dependencies import get_current_user
 
 router = APIRouter()
 
 @router.get("/{user_id}", response_model=List[UserFeedResponse])
-async def get_user_feed(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user_feed(user_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     사용자가 팔로우하는 유저들이 공유한 음악을 피드로 조회하는 엔드포인트.
     """

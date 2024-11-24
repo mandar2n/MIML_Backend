@@ -6,7 +6,7 @@ from src.auth.security import verify_password
 from src.models import User
 from src.config.config import load_config
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_DAYS = 365
 
 config = load_config()
 SECRET_KEY = config["SECRET_KEY"]
@@ -14,7 +14,7 @@ ALGORITHM = config["ALGORITHM"]
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.utcnow() + (expires_delta or timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 

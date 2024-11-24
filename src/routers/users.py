@@ -123,7 +123,7 @@ async def update_user_profile_endpoint(
     return {"message": "Profile updated successfully", "user": user}
 
 @router.get("/profile/{user_id}/following", response_model=List[UserResponse])
-async def get_following_list(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_following_list(user_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     following_result = await db.execute(select(User).join(Follow, Follow.following_id == User.userId).where(Follow.follower_id == user_id))
     following_users = following_result.scalars().all()
 
@@ -133,7 +133,7 @@ async def get_following_list(user_id: int, db: AsyncSession = Depends(get_db)):
     return following_users
 
 @router.get("/profile/{user_id}/followers", response_model=List[UserResponse])
-async def get_followers_list(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_followers_list(user_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     followers_result = await db.execute(select(User).join(Follow, Follow.follower_id == User.userId).where(Follow.following_id == user_id))
     followers = followers_result.scalars().all()
 
@@ -143,7 +143,7 @@ async def get_followers_list(user_id: int, db: AsyncSession = Depends(get_db)):
     return followers
 
 @router.get("/search", response_model=List[UserResponse])
-async def search_user(name: str, db: AsyncSession = Depends(get_db)):
+async def search_user(name: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     users = await search_user_by_name(db, name)
     if not users:
         raise HTTPException(status_code=404, detail="No users found with the given name")
@@ -151,7 +151,7 @@ async def search_user(name: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{user_id}/follow")
-async def follow_user(user_id: int, request: FollowRequest, db: AsyncSession = Depends(get_db)):
+async def follow_user(user_id: int, request: FollowRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     follower_id = request.follower_id
 
     if user_id == follower_id:
