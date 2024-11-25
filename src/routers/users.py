@@ -100,7 +100,8 @@ async def get_user_profile(
             "artist": shared_song.artist if shared_song else None,
             "album": shared_song.album if shared_song else None,
             "spotify_url": shared_song.spotify_url if shared_song else None,
-            "sharedAt": shared_song.sharedAt if shared_song else None
+            "sharedAt": shared_song.sharedAt if shared_song else None,
+            "album_cover_url":shared_song.album_cover_url if shared_song else None
         } if shared_song else None  # 최근 공유한 노래가 없으면 None 반환
     }
 
