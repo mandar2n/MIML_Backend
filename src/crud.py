@@ -232,13 +232,14 @@ async def create_today_playlist(user_id: int, db: AsyncSession) -> List[Song]:
         raise HTTPException(status_code=500, detail=str(e))
     
     
-async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, user_id: int, playlist_type: str):
+async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, user_id: int):
+    playlist_type = playlist_create.playlist_type
     try:
         # 한 사용자가 이미 마이 플레이리스트를 가지고 있는지 확인
         existing_playlist = await db.execute(
             select(Playlist).where(
                 Playlist.user_id == user_id,
-                Playlist.playlist_type == playlist_type
+                Playlist.playlist_type == 'my'
             )
         )
         existing_playlist = existing_playlist.scalar_one_or_none()
@@ -262,11 +263,13 @@ async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, use
         await db.refresh(new_playlist)
         return new_playlist
     
-    except IntegrityError as ie:
-        logger.error(f"Integrity error in create_playlist: {str(ie)}")
-        raise HTTPException(status_code=400, detail="Database integrity error")
+    except HTTPException as e:
+        # FastAPI가 HTTPException을 처리하도록 바로 반환
+        raise e
+
     except Exception as e:
-        logger.error(f"Error in create_playlist: {str(e)}")
+        # 예상치 못한 오류만 500으로 처리
+        logger.error(f"Unexpected error in create_playlist_endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
     
     
