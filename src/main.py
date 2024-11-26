@@ -10,7 +10,7 @@ from src.database import init_db
 from contextlib import asynccontextmanager
 import asyncio
 import platform
-from src.schedulers.__init__ import init_scheduler
+from src.schedulers.scheduler import init_scheduler
 
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -39,4 +39,5 @@ def read_root():
 
 @app.on_event("startup")
 async def startup_event():
+    # 스케줄러 초기화
     init_scheduler()
