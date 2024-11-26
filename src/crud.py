@@ -247,6 +247,9 @@ async def add_song_to_playlist(db: AsyncSession, playlist_id: int, song_id: int)
         )
         await db.commit()
         return {"message": "Song added to playlist successfully"}
+    except HTTPException as e:
+        # FastAPI가 자동으로 detail과 status_code를 사용자에게 전달
+        raise e
     except Exception as e:
         logger.error(f"Error in add_song_to_playlist: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
