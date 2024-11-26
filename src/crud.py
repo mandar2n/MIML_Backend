@@ -257,23 +257,29 @@ async def add_song_to_playlist(db: AsyncSession, playlist_id: int, song_id: int)
 # 마이플레이리스트에 노래 삭제 함수
 async def remove_song_from_playlist(db: AsyncSession, playlist_id: int, song_id: int):
     try:
-        playlist_result = await db.execute(select(Playlist).where(Playlist.playlistId == playlist_id))
+        # 플레이리스트가 존재하는지 확인
+        playlist_result = await db.execute(select(Playlist).filter(Playlist.playlistId == playlist_id))
         playlist = playlist_result.scalar_one_or_none()
         if not playlist:
             raise HTTPException(status_code=404, detail="Playlist not found")
 
-        song = next((s for s in playlist.songs if s.songId == song_id), None)
-        if not song:
+        # 노래가 존재하는지 확인 및 삭제
+        delete_query = playlist_songs.delete().where(
+            playlist_songs.c.playlist_id == playlist_id,
+            playlist_songs.c.song_id == song_id,
+        )
+        result = await db.execute(delete_query)
+        if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Song not found in the playlist")
 
-        # 노래 삭제
-        playlist.songs.remove(song)
         await db.commit()
         return {"message": "Song removed from playlist successfully"}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.error(f"Error in remove_song_from_playlist: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
-    
+
 # 특정 유형의 플레이리스트를 가져오는 함수
 async def get_playlist_by_type(user_id: int, playlist_type: str, db: AsyncSession) -> PlaylistResponse:
     result = await db.execute(
