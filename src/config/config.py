@@ -11,6 +11,8 @@ def load_config():
     client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
     secret_key = os.getenv("SECRET_KEY")
     algorithm = os.getenv("ALGORITHM")
+    SCHEDULER_CRON_HOUR = int(os.getenv("SCHEDULER_CRON_HOUR", 0))
+
 
     if not client_id or not client_secret:
         raise ValueError("Spotify Client ID or Secret is not set in the environment variables.")
@@ -21,5 +23,6 @@ def load_config():
         "SPOTIFY_CLIENT_ID": client_id,
         "SPOTIFY_CLIENT_SECRET": client_secret,
         "SECRET_KEY": secret_key,
-        "ALGORITHM": algorithm
+        "ALGORITHM": algorithm,
+        "SCHEDULER_CRON_HOUR": SCHEDULER_CRON_HOUR
     }

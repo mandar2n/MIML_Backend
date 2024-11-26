@@ -1,24 +1,23 @@
+from asyncio.log import logger
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from src.crud import add_song_to_playlist, create_today_playlist, create_playlist, remove_song_from_playlist
+from src.crud import add_song_to_playlist, create_playlist, remove_song_from_playlist
 from src.database import get_db
 from src.models import User, Song
+from src.schedulers.tasks import recreate_daily_playlist
 from src.schemas import PlaylistCreate, PlaylistResponse, SongAddRequest, SongInPlaylist, SongResponse
 from src.auth.dependencies import get_current_user
 
 router = APIRouter()
 
 # 24시간 내 공유된 음악으로 오늘의 플레이리스트 생성
-@router.post("/today/{user_id}", response_model=PlaylistResponse)
-async def create_today_playlist_route(user_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.post("/today", response_model=PlaylistResponse)
+async def create_today_playlist_route(db: AsyncSession = Depends(get_db)):
     try:
-        # create_today_playlist에서 반환한 결과 그대로 반환
-        shared_songs, playlist_id = await create_today_playlist(user_id, db)
-        print(shared_songs)
-        print(playlist_id)
-        
+        shared_songs, playlist_id = await recreate_daily_playlist(db)
+
         # 노래 없으면 에러 반환
         if not shared_songs:
             raise HTTPException(status_code=404, detail="No songs shared in the past 24 hours")
@@ -28,12 +27,22 @@ async def create_today_playlist_route(user_id: int, db: AsyncSession = Depends(g
             name="Today's Playlist",
             playlist_type="daily",
             createdAt=datetime.utcnow(),
-            tracks=[SongInPlaylist(**song.to_dict()) for song in shared_songs]  # SongInPlaylist 스키마로 변환
-         )
-        
-    
+            tracks=[SongInPlaylist(**song.to_dict()) for song in shared_songs]
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    
+# 오늘의 플레이리스트 생성 테스트용 추가 API
+@router.post("/today/test")
+async def test_create_today_playlists_route(db: AsyncSession = Depends(get_db)):
+    try:
+        shared_songs, playlist_id = await recreate_daily_playlist(db)
+        return {"message": "Daily playlists recreated successfully for testing."}
+    except Exception as e:
+        logger.error(f"Error in recreate_today_playlists: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 
 # 마이플레이리스트 생성
 @router.post("/my/{user_id}", response_model=PlaylistResponse)

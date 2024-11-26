@@ -10,6 +10,7 @@ from src.database import init_db
 from contextlib import asynccontextmanager
 import asyncio
 import platform
+from src.schedulers.__init__ import init_scheduler
 
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -35,3 +36,7 @@ app.include_router(charts.router, prefix="/charts", tags=["Charts"])
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Daily Jam!"}
+
+@app.on_event("startup")
+async def startup_event():
+    init_scheduler()
