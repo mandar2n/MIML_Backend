@@ -148,6 +148,29 @@ async def get_monthly_chart(db: AsyncSession):
         }
         for idx, row in enumerate(chart_data)
     ]
+async def get_yearly_chart(db: AsyncSession):
+    """ 연간 차트: 한 해 동안 공유된 노래의 공유 횟수를 집계하고 순위를 부여합니다. """
+    start_of_year = datetime.utcnow().replace(month=1, day=1).date()  # 해당 연도의 시작 날짜
+    result = await db.execute(
+        select(Song.title, Song.artist, Song.uri, Song.album_cover_url, func.count(Song.songId).label('share_count'))
+        .filter(func.date(Song.sharedAt) >= start_of_year)
+        .group_by(Song.title, Song.artist, Song.uri, Song.album_cover_url)
+        .order_by(func.count(Song.songId).desc())
+    )
+    # 순위를 기반으로 ID 추가
+    chart_data = result.fetchmany(10)
+    return [
+        {
+            "rank": idx + 1,  # 순위 기반 ID
+            "title": row.title,
+            "artist": row.artist,
+            "uri": row.uri,
+            "album_cover_url": row.album_cover_url,
+            "share_count": row.share_count
+        }
+        for idx, row in enumerate(chart_data)
+    ]
+
 
 async def share_song(
     db: AsyncSession,
