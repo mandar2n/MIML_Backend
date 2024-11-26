@@ -83,19 +83,31 @@ async def create_playlist_endpoint(
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
 
-    
-@router.put("/{playlistId}", response_model=SongResponse)
-async def update_playlist(playlistId: int, request: SongAddRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+
+# 마이 플레이리스트에 특정 노래 추가
+@router.put("/{playlistId}/add", response_model=SongResponse)
+async def update_playlist(
+    playlistId: int, 
+    request: SongAddRequest, 
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     try:
         return await add_song_to_playlist(db, playlistId, request.songId)
     except HTTPException as e:
         raise e
     
     
-@router.delete("/{playlistId}", response_model=SongResponse)
-async def delete_song_from_playlist(playlistId: int, request: SongAddRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+# 마이 플레이리스트에 특정 노래 삭제
+@router.delete("/{playlistId}/remove/{songId}", response_model=SongResponse)
+async def delete_song_from_playlist(
+    playlistId: int, 
+    songId: int,
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     try:
-        return await remove_song_from_playlist(db, playlistId, request.songId)
+        return await remove_song_from_playlist(db, playlistId, songId)
     except HTTPException as e:
         raise e
     

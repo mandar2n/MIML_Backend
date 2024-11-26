@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 from datetime import datetime, timedelta
-from src.models import User, Song, Follow, Playlist
+from src.models import User, Song, Follow, Playlist, playlist_songs
 from typing import Optional, List
 from src.schemas import PlaylistCreate, PlaylistResponse, UserUpdate
 from src.auth.security import get_password_hash
@@ -215,28 +215,43 @@ async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, use
         logger.error(f"Unexpected error in create_playlist_endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
     
-    
+# 마이플레이리스트에 노래 추가 함수
 async def add_song_to_playlist(db: AsyncSession, playlist_id: int, song_id: int):
     try:
-        result = await db.execute(select(Song).filter(Song.songId == song_id)) # 해당 노래가 songs 테이블에 존재하는지 확인
-        song = result.scalar_one_or_none()
+        # 노래가 존재하는지 확인
+        song_result = await db.execute(select(Song).filter(Song.songId == song_id))
+        song = song_result.scalar_one_or_none()
         if not song:
             raise HTTPException(status_code=404, detail="Song not found")
 
-        playlist_result = await db.execute(select(Playlist).where(Playlist.playlistId == playlist_id))
+        # 플레이리스트가 존재하는지 확인
+        playlist_result = await db.execute(select(Playlist).filter(Playlist.playlistId == playlist_id))
         playlist = playlist_result.scalar_one_or_none()
         if not playlist:
             raise HTTPException(status_code=404, detail="Playlist not found")
 
-        # 노래 추가
-        playlist.songs.append(song)
+        # 중복 여부 확인
+        existing_entry = await db.execute(
+            select(playlist_songs.c.song_id)
+            .where(
+                playlist_songs.c.playlist_id == playlist_id,
+                playlist_songs.c.song_id == song_id,
+            )
+        )
+        if existing_entry.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Song already in the playlist")
+
+        # 중간 테이블에 직접 추가
+        await db.execute(
+            playlist_songs.insert().values(playlist_id=playlist_id, song_id=song_id)
+        )
         await db.commit()
         return {"message": "Song added to playlist successfully"}
     except Exception as e:
         logger.error(f"Error in add_song_to_playlist: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
+    
+# 마이플레이리스트에 노래 삭제 함수
 async def remove_song_from_playlist(db: AsyncSession, playlist_id: int, song_id: int):
     try:
         playlist_result = await db.execute(select(Playlist).where(Playlist.playlistId == playlist_id))
