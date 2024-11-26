@@ -12,35 +12,44 @@ from src.auth.dependencies import get_current_user
 
 router = APIRouter()
 
-# 24시간 내 공유된 음악으로 오늘의 플레이리스트 생성
-@router.post("/today", response_model=PlaylistResponse)
+# 24시간 내 공유된 음악으로 오늘의 플레이리스트 생성 (스케줄러 api)
+@router.post("/today", response_model=dict)
 async def create_today_playlist_route(db: AsyncSession = Depends(get_db)):
+    """
+    스케줄러에서 매일 특정 시각에 호출되는 API.
+    실제 데이터베이스에 커밋하여 오늘의 플레이리스트를 생성.
+    """
     try:
-        shared_songs, playlist_id = await recreate_daily_playlist(db)
-
-        # 노래 없으면 에러 반환
-        if not shared_songs:
-            raise HTTPException(status_code=404, detail="No songs shared in the past 24 hours")
-
-        return PlaylistResponse(
-            playlistId=playlist_id,
-            name="Today's Playlist",
-            playlist_type="daily",
-            createdAt=datetime.utcnow(),
-            tracks=[SongInPlaylist(**song.to_dict()) for song in shared_songs]
-        )
+        # 매일 24시간 기준으로 모든 유저의 플레이리스트 생성
+        await recreate_daily_playlist(db, is_test=False)
+        return {"message": "Daily playlists recreated successfully."}
     except Exception as e:
+        logger.error(f"Error in recreate_today_playlists: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
     
-# 오늘의 플레이리스트 생성 테스트용 추가 API
-@router.post("/today/test")
+# 오늘의 플레이리스트 생성 테스트용 API
+@router.post("/today/test", response_model=dict)
 async def test_create_today_playlists_route(db: AsyncSession = Depends(get_db)):
+    """
+    테스트를 위해 호출되는 API.
+    데이터베이스에 커밋하지 않으며 디버깅 정보를 반환.
+    """
     try:
-        shared_songs, playlist_id = await recreate_daily_playlist(db)
-        return {"message": "Daily playlists recreated successfully for testing."}
+        # 트랜잭션을 롤백하여 데이터베이스를 변경하지 않음
+        result = await recreate_daily_playlist(db, is_test=True)
+
+        # 디버깅 정보를 포함한 반환
+        return {
+            "message": "Daily playlists recreated successfully for testing.",
+            "details": {
+                "total_users_processed": len(result.get("users", [])),
+                "playlists_created": len(result.get("playlists", [])),
+                "shared_songs_processed": result.get("shared_songs", 0),
+            },
+        }
     except Exception as e:
-        logger.error(f"Error in recreate_today_playlists: {str(e)}")
+        logger.error(f"Error in test_create_today_playlists: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
