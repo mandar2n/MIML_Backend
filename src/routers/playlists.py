@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from src.crud import add_song_to_playlist, create_playlist, remove_song_from_playlist
+from src.crud import add_song_to_playlist, create_playlist, get_playlist_by_type, remove_song_from_playlist
 from src.database import get_db
 from src.models import User, Song
 from src.schedulers.tasks import recreate_daily_playlist
@@ -53,7 +53,7 @@ async def test_create_today_playlists_route(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# 마이플레이리스트 생성
+# 마이 플레이리스트 생성
 @router.post("/my/{user_id}", response_model=PlaylistResponse)
 async def create_playlist_endpoint(
     user_id: int,  
@@ -98,3 +98,21 @@ async def delete_song_from_playlist(playlistId: int, request: SongAddRequest, db
         return await remove_song_from_playlist(db, playlistId, request.songId)
     except HTTPException as e:
         raise e
+    
+    
+# 오늘의 플레이리스트 조회 
+@router.get("/today/{userId}", response_model=PlaylistResponse)
+async def get_today_playlist(userId: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    playlist = await get_playlist_by_type(userId, "daily", db)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Daily playlist not found.")
+    return playlist
+
+
+# 마이 플레이리스트 조회
+@router.get("/my/{userId}", response_model=PlaylistResponse)
+async def get_my_playlist(userId: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    playlist = await get_playlist_by_type(userId, "my", db)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="My playlist not found.")
+    return playlist

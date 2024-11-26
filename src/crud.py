@@ -5,10 +5,11 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
+from sqlalchemy.orm import selectinload
 from datetime import datetime, timedelta
 from src.models import User, Song, Follow, Playlist
 from typing import Optional, List
-from src.schemas import PlaylistCreate, UserUpdate
+from src.schemas import PlaylistCreate, PlaylistResponse, UserUpdate
 from src.auth.security import get_password_hash
 import logging
 
@@ -174,63 +175,6 @@ async def share_song(
     await db.refresh(shared_song)
     return shared_song
 
-# async def create_today_playlist(user_id: int, db: AsyncSession) -> List[Song]:
-#     try:
-#         now = datetime.utcnow()
-#         # 한국 시간 18시 (UTC 기준 9시)에 플레이리스트 생성
-#         if now.hour < 1:
-#             raise HTTPException(status_code=400, detail="Today's playlist is only available after 18:00")
-
-#         # 지난 24시간 기준으로 시작 시각 계산
-#         past_24_hours = now - timedelta(hours=24)
-
-#         # 트랜잭션 내에서 비동기 작업 수행
-#         async with db.begin():
-#             # 사용자 검색
-#             user_result = await db.execute(select(User).where(User.userId == user_id))
-#             user = user_result.scalar_one_or_none()
-#             if not user:
-#                 raise HTTPException(status_code=404, detail="User not found")
-
-#             # 사용자가 팔로우하는 유저들의 ID 가져오기
-#             followed_user_ids_result = await db.execute(
-#                 select(Follow.following_id).where(Follow.follower_id == user_id)
-#             )
-#             followed_user_ids = [row.following_id for row in followed_user_ids_result]
-
-#             if not followed_user_ids:
-#                 followed_user_ids = []  # 빈 리스트로 처리
-
-#             # 24시간 내 공유된 노래들 조회
-#             shared_songs_result = await db.execute(
-#                 select(Song).where(
-#                     Song.sharedAt >= past_24_hours,
-#                     Song.sharedBy.in_([user_id] + followed_user_ids)
-#                 )
-#             )
-#             shared_songs = shared_songs_result.scalars().all()
-            
-         
-#             # 오늘의 플레이리스트 생성
-#             playlist = Playlist(
-#                 name="Today's Playlist",
-#                 playlist_type="daily",
-#                 createdAt=datetime.utcnow(),
-#                 user_id=user_id
-#             )
-#             db.add(playlist)
-
-#         # 비동기 작업이 끝난 후 commit() 및 refresh() 호출
-#         await db.commit()  # 트랜잭션 커밋
-#         await db.refresh(playlist)  # 트랜잭션이 닫힌 후에 refresh 호출
-
-#         # 생성된 playlistId 반환
-#         return shared_songs, playlist.playlistId
-    
-#     except Exception as e:
-#         logger.error(f"Error in create_today_playlist: {str(e)}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
 async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, user_id: int):
     playlist_type = playlist_create.playlist_type
     try:
@@ -311,3 +255,37 @@ async def remove_song_from_playlist(db: AsyncSession, playlist_id: int, song_id:
     except Exception as e:
         logger.error(f"Error in remove_song_from_playlist: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+    
+# 특정 유형의 플레이리스트를 가져오는 함수
+async def get_playlist_by_type(user_id: int, playlist_type: str, db: AsyncSession) -> PlaylistResponse:
+    result = await db.execute(
+        select(Playlist)
+        .where(Playlist.user_id == user_id, Playlist.playlist_type == playlist_type)
+        .options(selectinload(Playlist.songs))  # 플레이리스트와 노래 관계를 로드
+    )
+    playlist = result.scalars().first()
+
+    if not playlist:
+        return None
+
+    # PlaylistResponse 스키마로 변환
+    return PlaylistResponse(
+        playlistId=playlist.playlistId,
+        name=playlist.name,
+        playlist_type=playlist.playlist_type,
+        createdAt=playlist.createdAt,
+        tracks=[
+            {
+                "songId": song.songId,
+                "title": song.title,
+                "artist": song.artist,
+                "album": song.album,
+                "spotify_url": song.spotify_url,
+                "album_cover_url": song.album_cover_url,
+                "uri": song.uri,
+                "sharedBy": song.sharedBy,
+                "sharedAt": song.sharedAt,
+            }
+            for song in playlist.songs
+        ],
+    )
