@@ -164,6 +164,7 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str
     userId: int
+    playlistId: int
     
 # Playlist 생성 요청에 대한 스키마
 class PlaylistCreate(BaseModel):

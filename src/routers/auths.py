@@ -10,7 +10,7 @@ from src.models import Playlist, User
 from src.database import get_db
 from src.auth.security import get_password_hash, verify_password
 from src.auth.auth import create_access_token
-from src.schemas import RegisterRequest, LoginRequest
+from src.schemas import LoginResponse, RegisterRequest, LoginRequest
 from datetime import datetime, timedelta
 from src.auth.dependencies import get_current_user
 
@@ -66,18 +66,34 @@ async def register_user(request: RegisterRequest, db: AsyncSession = Depends(get
         "playlistId": new_playlist.playlistId  # 마이플레이리스트 ID 반환
     } 
 
-@router.post("/login")
+@router.post("/login", response_model=LoginResponse)
 async def login_user(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+    # 사용자 조회
     result = await db.execute(select(User).filter(User.email == request.email))
     user = result.scalars().first()
     
     if not user or not verify_password(request.password, user.hashed_pw):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
-    access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=30))
-    
-    return {"access_token": access_token, "token_type": "bearer", "userId": user.userId}
+    # 마이플레이리스트 조회
+    result = await db.execute(
+        select(Playlist).filter(Playlist.user_id == user.userId, Playlist.playlist_type == "my")
+    )
+    my_playlist = result.scalars().first()
 
+    if not my_playlist:
+        raise HTTPException(status_code=500, detail="My Playlist not found for user")
+
+    # 액세스 토큰 생성
+    access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=3000))
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "userId": user.userId,
+        "playlistId": my_playlist.playlistId,
+    }
+    
 @router.post("/logout")
 async def logout_user(current_user: User = Depends(get_current_user)):
     return {"msg": "User logged out. Please clear the token on the client side."}
