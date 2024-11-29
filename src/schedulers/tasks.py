@@ -23,14 +23,21 @@ async def recreate_daily_playlist(
 
     try:
         async with db.begin():
+            
+            # 디버깅: 현재 시간 출력
+            print(f"Recreating playlists at {datetime.utcnow()}")
+            
             # 모든 사용자 가져오기
             users_result = await db.execute(select(User))
             users = users_result.scalars().all()
+            print(f"Total users: {len(users)}")
             
             processed_users = []
             created_playlists = []
 
             for user in users:
+                print(f"Processing user: {user.email}")
+                
                 # 오늘의 플레이리스트 가져오기
                 playlist_result = await db.execute(
                     select(Playlist).where(
@@ -66,6 +73,14 @@ async def recreate_daily_playlist(
                     )
                 )
                 shared_songs = shared_songs_result.scalars().all()
+                
+                # 중복 제거: 제목과 가수를 기준으로
+                unique_songs = {}
+                for song in shared_songs:
+                    key = (song.title.strip().lower(), song.artist.strip().lower())  # 대소문자 및 공백 제거
+                    if key not in unique_songs:
+                        unique_songs[key] = song
+
 
                 # 기존 플레이리스트의 노래 삭제
                 await db.execute(
@@ -73,14 +88,17 @@ async def recreate_daily_playlist(
                 )
 
                 # 새로운 노래 추가
-                for song in shared_songs:
-                    await db.execute(
-                        playlist_songs.insert().values(
-                            playlist_id=playlist.playlistId,
-                            song_id=song.songId
+                if unique_songs:
+                    for song in unique_songs.values():
+                        await db.execute(
+                            playlist_songs.insert().values(
+                                playlist_id=playlist.playlistId,
+                                song_id=song.songId
+                            )
                         )
-                    )
-                    
+                else:
+                    print(f"No songs shared in the last 24 hours for user {user.userId}. Playlist will be empty.")
+                
                 processed_users.append(user.userId)
                 
         if is_test:
@@ -88,7 +106,8 @@ async def recreate_daily_playlist(
             return {
                 "users": processed_users,
                 "playlists": created_playlists,
-                "shared_songs": len(shared_songs),
+                "shared_songs": len(shared_songs) if shared_songs else 0,
+                "unique_songs": len(unique_songs) if unique_songs  else 0
             }
 
         # 실제 환경에서는 데이터베이스 커밋 후 로그 출력
