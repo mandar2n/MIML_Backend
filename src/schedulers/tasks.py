@@ -30,13 +30,13 @@ async def recreate_daily_playlist(
             # 모든 사용자 가져오기
             users_result = await db.execute(select(User))
             users = users_result.scalars().all()
-            print(f"Total users: {len(users)}")
+            print(f"Total users: {len(users)}") # 디버깅
             
             processed_users = []
             created_playlists = []
 
             for user in users:
-                print(f"Processing user: {user.email}")
+                print(f"Processing user: {user.email}") # 디버깅
                 
                 # 오늘의 플레이리스트 가져오기
                 playlist_result = await db.execute(

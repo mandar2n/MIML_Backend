@@ -67,3 +67,49 @@ async def share_song_to_feed(
         raise HTTPException(status_code=400, detail="Failed to share song.")
     
     return {"message": "Song shared successfully", "shared_song": shared_song}
+
+# 노래에 리액션 기능 엔드포인트
+@router.post("/{song_id}/reactions")
+async def add_reaction(
+    song_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
+    
+    # 노래 존재 여부 확인
+    result = await db.execute(select(Song).filter(Song.songId == song_id))
+    song = result.scalars().first()
+    
+    if not song:
+        raise HTTPException(status_code=404, detail="Song not found")
+
+    # 리액션 수 증가
+    song.reaction += 1
+    
+    # 세션에 변경 사항 반영
+    db.add(song)  # 변경된 객체를 세션에 추가
+
+    # 데이터베이스 커밋
+    await db.commit()
+
+    # 변경된 데이터를 다시 로드하여 반영
+    await db.refresh(song)
+
+    return {"message": "Reaction added successfully", "songId": song.songId, "reactions": song.reaction}
+
+# 노래의 리액션 수 조회 기능 엔드포인트
+@router.get("{song_id}/reactions")
+async def get_reactions(
+    song_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
+    
+    # 노래 존재 여부 확인
+    result = await db.execute(select(Song).filter(Song.songId == song_id))
+    song = result.scalars().first()
+    
+    if not song:
+        raise HTTPException(status_code=404, detail="Song not found")
+
+    return {"songId": song.songId, "reactions": song.reaction}
