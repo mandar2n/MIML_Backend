@@ -37,9 +37,7 @@ async def share_song_to_feed(
     # 현재 날짜를 가져옵니다.
     today = datetime.utcnow().date()
 
-    # 데이터베이스에서 동일 사용자가 오늘 동일 노래를 공유했는지 확인
     stmt = select(Song).where(
-        Song.uri == song.uri,
         Song.sharedBy == current_user.userId,
         Song.sharedAt >= today
     )
@@ -50,7 +48,7 @@ async def share_song_to_feed(
     if existing_share:
         raise HTTPException(
             status_code=400, 
-            detail="You have already shared this song today."
+            detail="You have already shared song today."
         )
 
     # 공유 로직 실행
