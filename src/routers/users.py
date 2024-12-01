@@ -126,3 +126,34 @@ async def follow_user(
     follow = await add_follow(db, follower_id=current_user.userId, following_id=user_id)
     
     return {"message": "Followed successfully", "follow": follow}
+
+@router.delete("/{user_id}/unfollow")
+async def unfollow_user(
+    user_id: int, 
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    팔로우 해제 엔드포인트
+    """
+    if user_id == current_user.userId:
+        raise HTTPException(status_code=400, detail="You cannot unfollow yourself.")
+    
+    # 팔로우 관계 확인
+    follow_result = await db.execute(
+        select(Follow)
+        .where(
+            Follow.follower_id == current_user.userId,
+            Follow.following_id == user_id
+        )
+    )
+    follow = follow_result.scalars().first()
+    
+    if not follow:
+        raise HTTPException(status_code=404, detail="Follow relationship not found.")
+    
+    # 팔로우 관계 삭제
+    await db.delete(follow)
+    await db.commit()
+    
+    return {"message": "Unfollowed successfully"}

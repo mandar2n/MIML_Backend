@@ -7,7 +7,10 @@ from src.crud import share_song
 from src.services.spotify_service import get_song_details
 from src.schemas import SongShare,SongDetailResponse  # SongShare 스키마 추가 필요
 from src.auth.dependencies import get_current_user
-from src.models import User
+from src.models import User,Song
+from datetime import datetime, timedelta
+from sqlalchemy.future import select
+from sqlalchemy.exc import NoResultFound
 
 router = APIRouter()
 
@@ -21,6 +24,7 @@ def get_song_detail(song_uri: str):
         raise HTTPException(status_code=404, detail="Song details not found")
     return song_detail
 
+
 @router.post("/{song_uri}/share")
 async def share_song_to_feed(
     song: SongShare, 
@@ -30,7 +34,26 @@ async def share_song_to_feed(
     """
     사용자가 노래를 선택하여 피드에 공유하는 엔드포인트
     """
-    # 현재 사용자 ID를 사용하여 공유
+    # 현재 날짜를 가져옵니다.
+    today = datetime.utcnow().date()
+
+    # 데이터베이스에서 동일 사용자가 오늘 동일 노래를 공유했는지 확인
+    stmt = select(Song).where(
+        Song.uri == song.uri,
+        Song.sharedBy == current_user.userId,
+        Song.sharedAt >= today
+    )
+
+    result = await db.execute(stmt)
+    existing_share = result.scalars().first()
+    
+    if existing_share:
+        raise HTTPException(
+            status_code=400, 
+            detail="You have already shared this song today."
+        )
+
+    # 공유 로직 실행
     shared_song = await share_song(
         db=db,
         user_id=current_user.userId,  # current_user에서 user_id 가져오기
