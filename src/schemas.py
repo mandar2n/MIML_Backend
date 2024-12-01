@@ -22,16 +22,15 @@ class SongCreate(SongBase):
     """
     shared_by: int
 
-class SongResponse(SongBase):
-    """
-    응답으로 사용할 노래 스키마
-    """
-    songId: int
-    sharedAt: datetime
-    sharedBy: int
+class SongResponse(BaseModel):
+    title: str
+    artist: str
+    album_cover_url: str
+    shared_at: str
+    reaction: int
+    spotify_url: str
+    uri: str
 
-    class Config:
-        orm_mode = True  # ORM 모델을 기반으로 직렬화 가능하도록 설정
 
 
 class SongDetailResponse(BaseModel):
@@ -102,7 +101,7 @@ class UserFeedResponse(BaseModel):
     id: int
     name: str
     profileImage: Optional[str] = None
-    Song: List[SharedSongDetail]
+    Song: SongResponse  # 단일 객체로 수정
 
     class Config:
         orm_mode = True
