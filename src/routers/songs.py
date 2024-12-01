@@ -98,7 +98,7 @@ async def add_reaction(
     return {"message": "Reaction added successfully", "songId": song.songId, "reactions": song.reaction}
 
 # 노래의 리액션 수 조회 기능 엔드포인트
-@router.get("{song_id}/reactions")
+@router.get("/{song_id}/reactions")
 async def get_reactions(
     song_id: int, 
     db: Session = Depends(get_db),
