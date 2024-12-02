@@ -6,6 +6,7 @@ from sqlalchemy.sql import delete
 from datetime import datetime, timedelta
 from src.database import get_db
 from src.models import User, Song, Playlist, Follow, playlist_songs
+from pytz import timezone
 
 async def recreate_daily_playlist(
     db: AsyncSession = Depends(get_db), 
@@ -18,25 +19,34 @@ async def recreate_daily_playlist(
     - is_test=False: 실제 데이터베이스에 커밋 (스케줄러용)
     """
     
-    now = datetime.utcnow()
-    past_24_hours = now - timedelta(hours=24)
+    # KST (한국 표준시) 기준으로 18시 기준으로 지난 24시간을 계산
+    kst = timezone("Asia/Seoul")
+    now_kst = datetime.now(kst)
+    today_start_kst = now_kst.replace(hour=18, minute=0, second=0, microsecond=0)  # 오늘 18시로 시작
+    if now_kst < today_start_kst:
+        today_start_kst = today_start_kst - timedelta(days=1)  # 18시 이전이면 하루 전으로 설정
+    
+    # 오늘 18시 기준을 UTC로 변환
+    today_start_utc = today_start_kst.astimezone(timezone("UTC"))
+
+    # Convert to naive datetime in UTC (removing timezone info)
+    today_start_utc_naive = today_start_utc.replace(tzinfo=None)
 
     try:
         async with db.begin():
-            
-            # 디버깅: 현재 시간 출력
-            print(f"Recreating playlists at {datetime.utcnow()}")
+            # 디버깅 (현재 시각 출력)
+            print(f"Recreating playlists at {datetime.now(kst)} (KST)")
             
             # 모든 사용자 가져오기
             users_result = await db.execute(select(User))
             users = users_result.scalars().all()
-            print(f"Total users: {len(users)}")
+            print(f"Total users: {len(users)}") # 디버깅
             
             processed_users = []
             created_playlists = []
 
             for user in users:
-                print(f"Processing user: {user.email}")
+                print(f"Processing user: {user.email}") # 디버깅
                 
                 # 오늘의 플레이리스트 가져오기
                 playlist_result = await db.execute(
@@ -65,10 +75,10 @@ async def recreate_daily_playlist(
                 )
                 followed_user_ids = [row.following_id for row in followed_user_ids_result]
 
-                # 지난 24시간 동안 공유된 노래 가져오기
+                # 최근 24시간 내 공유된 노래 조회
                 shared_songs_result = await db.execute(
                     select(Song).where(
-                        Song.sharedAt >= past_24_hours,
+                        Song.sharedAt >= today_start_utc_naive,  # Use naive datetime for comparison
                         Song.sharedBy.in_([user.userId] + followed_user_ids)
                     )
                 )
@@ -80,7 +90,6 @@ async def recreate_daily_playlist(
                     key = (song.title.strip().lower(), song.artist.strip().lower())  # 대소문자 및 공백 제거
                     if key not in unique_songs:
                         unique_songs[key] = song
-
 
                 # 기존 플레이리스트의 노래 삭제
                 await db.execute(
@@ -112,8 +121,7 @@ async def recreate_daily_playlist(
 
         # 실제 환경에서는 데이터베이스 커밋 후 로그 출력
         await db.commit()
-        print(f"Recreated daily playlists successfully at {now}.")
-
+        print(f"Recreated daily playlists successfully at {today_start_kst} (KST).")
     except Exception as e:
         print(f"Error in recreate_daily_playlist: {str(e)}")
         if is_test:
