@@ -7,7 +7,7 @@ from src.crud import add_song_to_playlist, create_playlist, get_playlist_by_type
 from src.database import get_db
 from src.models import User, Song
 from src.schedulers.tasks import recreate_daily_playlist
-from src.schemas import PlaylistCreate, PlaylistResponse, SongAddRequest, SongInPlaylist, SongResponse
+from src.schemas import PlaylistCreate, PlaylistResponse, SongAddRequest, SongInPlaylist, SongRemoveRequest, SongResponse
 from src.auth.dependencies import get_current_user
 
 router = APIRouter()
@@ -93,21 +93,21 @@ async def update_playlist(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        return await add_song_to_playlist(db, playlistId, request.songId)
+        return await add_song_to_playlist(db, playlistId, request.uri)
     except HTTPException as e:
         raise e
     
     
 # 마이 플레이리스트에 특정 노래 삭제
-@router.delete("/{playlistId}/remove/{songId}", response_model=SongResponse)
+@router.delete("/{playlistId}/remove", response_model=SongResponse)
 async def delete_song_from_playlist(
     playlistId: int, 
-    songId: int,
+    request: SongRemoveRequest,
     db: AsyncSession = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
     try:
-        return await remove_song_from_playlist(db, playlistId, songId)
+        return await remove_song_from_playlist(db, playlistId, request.uri)
     except HTTPException as e:
         raise e
     

@@ -198,7 +198,10 @@ class PlaylistResponse(BaseModel):
         orm_mode = True
         
 class SongAddRequest(BaseModel):
-    songId: int
+    uri: str
+    
+class SongRemoveRequest(BaseModel):
+    uri: str   
 
 class SongResponse(BaseModel):
     message: str
