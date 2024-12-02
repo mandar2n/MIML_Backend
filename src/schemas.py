@@ -23,6 +23,7 @@ class SongCreate(SongBase):
     shared_by: int
 
 class SongResponse(BaseModel):
+    songId: int  # songId 필드 추가
     title: str
     artist: str
     album_cover_url: str

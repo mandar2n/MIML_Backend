@@ -54,6 +54,7 @@ async def get_user_feed(
             "name": user.name,
             "profileImage": user.profile_image_url,
             "Song": {  # 단일 객체로 반환
+                "songId": song.songId,  # songId 추가
                 "title": song.title,
                 "artist": song.artist,
                 "album_cover_url": song.album_cover_url,
