@@ -258,10 +258,9 @@ async def add_song_to_playlist(db: AsyncSession, playlist_id: int, uri: str):
         # 중복 여부 확인
         existing_entry = await db.execute(
             select(playlist_songs.c.song_id)
-            .join(Song, playlist_songs.c.song_id == Song.songId)
             .where(
                 playlist_songs.c.playlist_id == playlist_id,
-                Song.uri == uri,  # URI로 중복 여부 확인
+                playlist_songs.c.song_id == song.songId,
             )
         )
         if existing_entry.scalar_one_or_none():
@@ -299,9 +298,7 @@ async def remove_song_from_playlist(db: AsyncSession, playlist_id: int, uri: str
         # 노래가 존재하는지 확인 및 삭제
         delete_query = playlist_songs.delete().where(
             playlist_songs.c.playlist_id == playlist_id,
-            playlist_songs.c.song_id.in_(
-                select(Song.songId).where(Song.uri == uri)  # URI를 사용해 songId 매핑
-            ),
+            playlist_songs.c.song_id == song.songId,
         )
         result = await db.execute(delete_query)
         if result.rowcount == 0:
