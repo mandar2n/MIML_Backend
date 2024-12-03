@@ -242,11 +242,13 @@ async def create_playlist(db: AsyncSession, playlist_create: PlaylistCreate, use
 async def add_song_to_playlist(db: AsyncSession, playlist_id: int, uri: str):
     try:
         # 노래가 존재하는지 확인
-        song_result = await db.execute(select(Song).filter(Song.uri == uri))
+        song_result = await db.execute(
+            select(Song).filter(Song.uri == uri).order_by(Song.songId.asc())
+        )
         song = song_result.scalar_one_or_none()
         if not song:
             raise HTTPException(status_code=404, detail="Song not found")
-
+        
         # 플레이리스트가 존재하는지 확인
         playlist_result = await db.execute(select(Playlist).filter(Playlist.playlistId == playlist_id))
         playlist = playlist_result.scalar_one_or_none()
@@ -281,11 +283,13 @@ async def add_song_to_playlist(db: AsyncSession, playlist_id: int, uri: str):
 async def remove_song_from_playlist(db: AsyncSession, playlist_id: int, uri: str):
     try:
         # 노래가 존재하는지 확인
-        song_result = await db.execute(select(Song).filter(Song.uri == uri))
+        song_result = await db.execute(
+            select(Song).filter(Song.uri == uri).order_by(Song.songId.asc())
+        )
         song = song_result.scalar_one_or_none()
         if not song:
             raise HTTPException(status_code=404, detail="Song not found")
-
+        
         # 플레이리스트가 존재하는지 확인
         playlist_result = await db.execute(select(Playlist).filter(Playlist.playlistId == playlist_id))
         playlist = playlist_result.scalar_one_or_none()
