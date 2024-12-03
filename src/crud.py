@@ -245,7 +245,7 @@ async def add_song_to_playlist(db: AsyncSession, playlist_id: int, uri: str):
         song_result = await db.execute(
             select(Song).filter(Song.uri == uri).order_by(Song.songId.asc())
         )
-        song = song_result.scalar_one_or_none()
+        song = song_result.scalars().first()  # 첫 번째 결과를 가져옴
         if not song:
             raise HTTPException(status_code=404, detail="Song not found")
         
@@ -285,7 +285,7 @@ async def remove_song_from_playlist(db: AsyncSession, playlist_id: int, uri: str
         song_result = await db.execute(
             select(Song).filter(Song.uri == uri).order_by(Song.songId.asc())
         )
-        song = song_result.scalar_one_or_none()
+        song = song_result.scalars().first()  # 첫 번째 결과를 가져옴
         if not song:
             raise HTTPException(status_code=404, detail="Song not found")
         
