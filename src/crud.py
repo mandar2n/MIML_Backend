@@ -89,7 +89,7 @@ async def get_daily_chart(db: AsyncSession):
         .order_by(func.count(Song.songId).desc())
     )
     # 순위를 기반으로 ID 추가
-    chart_data = result.fetchmany(10)
+    chart_data = result.fetchmany(50)
     return [
         {
             "rank": idx + 1,  # 순위 기반 ID
@@ -112,7 +112,7 @@ async def get_weekly_chart(db: AsyncSession):
         .order_by(func.count(Song.songId).desc())
     )
     # 순위를 기반으로 ID 추가
-    chart_data = result.fetchmany(10)
+    chart_data = result.fetchmany(50)
     return [
         {
             "rank": idx + 1,  # 순위 기반 ID
@@ -136,7 +136,7 @@ async def get_monthly_chart(db: AsyncSession):
         .order_by(func.count(Song.songId).desc())
     )
     # 순위를 기반으로 ID 추가
-    chart_data = result.fetchmany(10)
+    chart_data = result.fetchmany(50)
     return [
         {
             "rank": idx + 1,  # 순위 기반 ID
@@ -158,7 +158,7 @@ async def get_yearly_chart(db: AsyncSession):
         .order_by(func.count(Song.songId).desc())
     )
     # 순위를 기반으로 ID 추가
-    chart_data = result.fetchmany(10)
+    chart_data = result.fetchmany(50)
     return [
         {
             "rank": idx + 1,  # 순위 기반 ID
